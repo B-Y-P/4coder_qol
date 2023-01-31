@@ -469,8 +469,7 @@ int main(void){
   path_to_self = string_remove_last_folder(path_to_self);
   String_Const_u8 path_to_src = string_remove_last_folder(path_to_self);
 
-  String_Const_u8 test_file_name = push_u8_stringf(arena, "%.*s/languages/4coder_lexer_cpp_test.cpp",
-                                                   string_expand(path_to_src));
+  String_Const_u8 test_file_name = push_u8_stringf(arena, "%S/languages/4coder_lexer_cpp_test.cpp", path_to_src);
 
   FILE *test_file = fopen((char*)test_file_name.str, "rb");
   if (test_file == 0){

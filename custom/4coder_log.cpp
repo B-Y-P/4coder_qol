@@ -15,8 +15,7 @@
 internal String_Const_u8
 log_event(Arena *arena, String_Const_u8 event_name, String_Const_u8 src_name, i32 line_number, i32 buffer, i32 view, i32 thread_id){
   List_String_Const_u8 list = {};
-  string_list_pushf(arena, &list, "%.*s:%d: %.*s",
-                    string_expand(src_name), line_number, string_expand(event_name));
+  string_list_pushf(arena, &list, "%S:%d: %S", src_name, line_number, event_name);
   if (thread_id != 0){
     string_list_pushf(arena, &list, " [thread=%d]", thread_id);
   }

@@ -9,14 +9,16 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#define STB_SPRINTF_IMPLEMENTATION
+#include "stb_sprintf.h"
 
 function String_Const_u8
 push_stringfv(Arena *arena, char *format, va_list args){
   va_list args2;
   va_copy(args2, args);
-  i32 size = vsnprintf(0, 0, format, args);
+  i32 size = stbsp_vsnprintf(0, 0, format, args);
   String_Const_u8 result = string_const_u8_push(arena, size + 1);
-  vsnprintf((char*)result.str, (size_t)result.size, format, args2);
+  stbsp_vsnprintf((char*)result.str, (int)result.size, format, args2);
   result.size -= 1;
   result.str[result.size] = 0;
   return(result);

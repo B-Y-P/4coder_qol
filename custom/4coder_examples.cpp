@@ -198,7 +198,7 @@ CUSTOM_DOC("Example of query_user_string and query_user_number")
           i32 repeats = (i32)string_to_integer(number_bar.string, 10);
           repeats = clamp_top(repeats, 1000);
           Scratch_Block scratch(app);
-          String_Const_u8 msg = push_stringf(scratch, "%.*s\n", string_expand(string_bar.string));
+          String_Const_u8 msg = push_stringf(scratch, "%S\n", string_bar.string);
           for (i32 i = 0; i < repeats; i += 1){
             print_message(app, msg);
           }

@@ -40,9 +40,7 @@ print_string_match_list_to_buffer(Application_Links *app, Buffer_ID out_buffer_i
         Temp_Memory line_temp = begin_temp(scratch);
         String_Const_u8 full_line_str = push_buffer_line(app, scratch, current_buffer, cursor.line);
         String_Const_u8 line_str = string_skip_chop_whitespace(full_line_str);
-        insertf(&out, "%.*s:%d:%d: %.*s\n",
-                string_expand(current_file_name), cursor.line, cursor.col,
-                string_expand(line_str));
+        insertf(&out, "%S:%d:%d: %S\n", current_file_name, cursor.line, cursor.col, line_str);
         end_temp(line_temp);
       }
     }
@@ -94,18 +92,18 @@ user_list_definition_array(Application_Links *app, Arena *arena, String_Const_u8
     result.count = 12;
     result.vals = push_array(arena, String_Const_u8, result.count);
     i32 i = 0;
-    result.vals[i++] = (push_u8_stringf(arena, "struct %.*s{"  , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "struct %.*s\n{", string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "struct %.*s\r\n{", string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "struct %.*s {" , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "union %.*s{"   , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "union %.*s\n{" , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "union %.*s\r\n{" , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "union %.*s {"  , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "enum %.*s{"    , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "enum %.*s\n{"  , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "enum %.*s\r\n{"  , string_expand(base_needle)));
-    result.vals[i++] = (push_u8_stringf(arena, "enum %.*s {"   , string_expand(base_needle)));
+    result.vals[i++] = (push_u8_stringf(arena, "struct %S{",     base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "struct %S\n{",   base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "struct %S\r\n{", base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "struct %S {",    base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "union %S{",      base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "union %S\n{",    base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "union %S\r\n{",  base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "union %S {",     base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "enum %S{",       base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "enum %S\n{",     base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "enum %S\r\n{",   base_needle));
+    result.vals[i++] = (push_u8_stringf(arena, "enum %S {",      base_needle));
     Assert(i == result.count);
   }
   return(result);
