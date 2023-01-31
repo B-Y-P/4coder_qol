@@ -1,0 +1,42 @@
+version(2);
+project_name = "4coder QOL";
+
+indent_with_tabs = false;
+indent_width = 2;
+
+patterns = {
+  "*.c",
+  "*.cpp",
+  "*.h",
+  "*.hpp",
+  "*.m",
+  "*.mm",
+  "*.bat",
+  "*.sh",
+  "*.4coder",
+  "*.txt",
+};
+
+blacklist_patterns = { ".*", };
+
+paths = {
+  { .path = ".", .recursive = true, .relative = true, },
+};
+
+load_paths = {
+  .win   = paths,
+  .mac   = paths,
+  .linux = paths,
+};
+
+commands = {
+  .run      = { .win = "run_test.bat", .out = "*compilation*", .footer_panel=true, .save_dirty_files=true,  .cursor_at_end=true,  },
+  .build    = { .win = "build.bat",    .out = "*compilation*", .footer_panel=true, .save_dirty_files=true,  .cursor_at_end=true,  },
+  .debugger = { .win = "remedybg .",   .out = "*compilation*", .footer_panel=true, .save_dirty_files=false, .cursor_at_end=false, },
+};
+
+fkey_command = {
+  .F2 = "run",
+  .F5 = "build",
+  .F9 = "debugger",
+};
