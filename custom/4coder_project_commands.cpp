@@ -17,7 +17,7 @@ prj_pattern_list_from_extension_array(Arena *arena, String8Array list){
     sll_queue_push(result.first, result.last, node);
     result.count += 1;
 
-    String8 str = push_stringf(arena, "*.%.*s", string_expand(list.vals[i]));
+    String8 str = push_stringf(arena, "*.%S", list.vals[i]);
     node->pattern.absolutes = string_split_wildcards(arena, str);
   }
   return(result);
@@ -126,7 +126,7 @@ prj_open_files_pattern_filter__rec(Application_Links *app, String8 path, Prj_Pat
       if (prj_match_in_pattern_list(file_name, blacklist)){
         continue;
       }
-      String8 new_path = push_u8_stringf(scratch, "%.*s%.*s/", string_expand(path), string_expand(file_name));
+      String8 new_path = push_u8_stringf(scratch, "%S%S/", path, file_name);
       prj_open_files_pattern_filter__rec(app, new_path, whitelist, blacklist, flags);
     }
     else{
@@ -136,8 +136,8 @@ prj_open_files_pattern_filter__rec(Application_Links *app, String8 path, Prj_Pat
       if (prj_match_in_pattern_list(file_name, blacklist)){
         continue;
       }
-      String8 full_path = push_u8_stringf(scratch, "%.*s%.*s", string_expand(path), string_expand(file_name));
-      create_buffer(app, full_path, 0);
+      String8 full_path = push_u8_stringf(scratch, "%S%S", path, file_name);
+      create_buffer(app, full_path, 0);  // bottle-neck for startup
     }
   }
 }
@@ -148,7 +148,7 @@ prj_open_files_pattern_filter(Application_Links *app, String8 dir, Prj_Pattern_L
   Scratch_Block scratch(app);
   String8 directory = dir;
   if (!character_is_slash(string_get_character(directory, directory.size - 1))){
-    directory = push_u8_stringf(scratch, "%.*s/", string_expand(dir));
+    directory = push_u8_stringf(scratch, "%S/", dir);
   }
   prj_open_files_pattern_filter__rec(app, directory, whitelist, blacklist, flags);
 }
@@ -159,7 +159,7 @@ prj_open_all_files_with_ext_in_hot(Application_Links *app, String8Array array, P
   String8 hot = push_hot_directory(app, scratch);
   String8 directory = hot;
   if (!character_is_slash(string_get_character(hot, hot.size - 1))){
-    directory = push_u8_stringf(scratch, "%.*s/", string_expand(hot));
+    directory = push_u8_stringf(scratch, "%S/", hot);
   }
   Prj_Pattern_List whitelist = prj_pattern_list_from_extension_array(scratch, array);
   Prj_Pattern_List blacklist = prj_get_standard_blacklist(scratch);
@@ -172,12 +172,12 @@ prj_open_all_files_with_ext_in_hot(Application_Links *app, String8Array array, P
 function void
 prj_stringize__string_list(Application_Links *app, Arena *arena, String8 name, Variable_Handle list, String8List *out){
   Scratch_Block scratch(app, arena);
-  string_list_pushf(arena, out, "%.*s = {\n", string_expand(name));
+  string_list_pushf(arena, out, "%S = {\n", name);
   for (Vars_Children(child, list)){
     String8 child_string = vars_string_from_var(scratch, child);
     if (child_string.size > 0){
       // TODO(allen): escape child_string
-      string_list_pushf(arena, out, "\"%.*s\",\n", string_expand(child_string));
+      string_list_pushf(arena, out, "\"%S\",\n", child_string);
     }
   }
   string_list_pushf(arena, out, "};\n");
@@ -225,7 +225,7 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
   String8 project_name = vars_string_from_var(scratch, vars_read_key(project, project_name_id));
   if (project_name.size > 0){
     // TODO(allen): escape project_name
-    string_list_pushf(arena, out, "project_name = \"%.*s\";\n", string_expand(project_name));
+    string_list_pushf(arena, out, "project_name = \"%S\";\n", project_name);
   }
 
   string_list_push(arena, out, str8_lit("\n"));
@@ -253,7 +253,7 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
       Variable_Handle os_paths = vars_read_key(load_paths, os_string_ids[i]);
       if (!vars_is_nil(os_paths)){
         String8 os_string = os_strings[i];
-        string_list_pushf(arena, out, ".%.*s = {\n", string_expand(os_string));
+        string_list_pushf(arena, out, ".%S = {\n", os_string);
         for (Vars_Children(child, os_paths)){
           Variable_Handle path_var = vars_read_key(child, path_id);
           Variable_Handle recursive_var = vars_read_key(child, recursive_id);
@@ -265,7 +265,7 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
           b32 relative = vars_b32_from_var(relative_var);
 
           string_list_push(arena, out, str8_lit("{ "));
-          string_list_pushf(arena, out, ".path = \"%.*s\", ", string_expand(path_string));
+          string_list_pushf(arena, out, ".path = \"%S\", ", path_string);
           string_list_pushf(arena, out, ".recursive = %s, ", (recursive?"true":"false"));
           string_list_pushf(arena, out, ".relative = %s, ", (relative?"true":"false"));
           string_list_push(arena, out, str8_lit("},\n"));
@@ -283,14 +283,14 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
     string_list_push(arena, out, str8_lit("commands = {\n"));
     for (Vars_Children(command, commands)){
       String8 command_name = vars_key_from_var(scratch, command);
-      string_list_pushf(arena, out, ".%.*s = {\n", string_expand(command_name));
+      string_list_pushf(arena, out, ".%S = {\n", command_name);
 
       for (i32 i = 0; i < os_string_count; i += 1){
         Variable_Handle os_cmd_var = vars_read_key(command, os_string_ids[i]);
         if (!vars_is_nil(os_cmd_var)){
           // TODO(allen): escape os_cmd_string
           String8 os_cmd_string = vars_string_from_var(scratch, os_cmd_var);
-          string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n", string_expand(os_strings[i]), string_expand(os_cmd_string));
+          string_list_pushf(arena, out, ".%S = \"%S\",\n", os_strings[i], os_cmd_string);
         }
       }
 
@@ -305,7 +305,7 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
       b32 save_dirty_files = vars_b32_from_var(save_dirty_files_var);
       b32 cursor_at_end = vars_b32_from_var(cursor_at_end_var);
 
-      string_list_pushf(arena, out, ".out = \"%.*s\",\n", string_expand(out_string));
+      string_list_pushf(arena, out, ".out = \"%S\",\n", out_string);
       string_list_pushf(arena, out, ".footer_panel = %s,\n", (footer_panel?"true":"false"));
       string_list_pushf(arena, out, ".save_dirty_files = %s,\n", (save_dirty_files?"true":"false"));
       string_list_pushf(arena, out, ".cursor_at_end = %s,\n", (cursor_at_end?"true":"false"));
@@ -322,8 +322,7 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
     for (Vars_Children(child, fkey_commands)){
       String8 key = vars_key_from_var(scratch, child);
       String8 name = vars_string_from_var(scratch, child);
-      string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n",
-                        string_expand(key), string_expand(name));
+      string_list_pushf(arena, out, ".%S = \"%S\",\n", key, name);
     }
     string_list_push(arena, out, str8_lit("};\n\n"));
   }
@@ -335,12 +334,11 @@ prj_stringize_project(Application_Links *app, Arena *arena, Variable_Handle proj
     string_list_push(arena, out, str8_lit("fkey_command_override = {\n"));
     for (Vars_Children(user_child, fkey_commands_overide)){
       String8 user_key = vars_key_from_var(scratch, user_child);
-      string_list_pushf(arena, out, ".%.*s = {\n", string_expand(user_key));
+      string_list_pushf(arena, out, ".%S = {\n", user_key);
       for (Vars_Children(child, user_child)){
         String8 key = vars_key_from_var(scratch, child);
         String8 name = vars_string_from_var(scratch, child);
-        string_list_pushf(arena, out, ".%.*s = \"%.*s\",\n",
-                          string_expand(key), string_expand(name));
+        string_list_pushf(arena, out, ".%S = \"%S\",\n", key, name);
       }
       string_list_pushf(arena, out, "},\n");
     }
@@ -353,22 +351,17 @@ prj_file_is_setup(Application_Links *app, String8 script_path, String8 script_fi
   Prj_Setup_Status result = {};
   {
     Scratch_Block scratch(app);
-    String8 bat_path = push_u8_stringf(scratch, "%.*s/%.*s.bat",
-                                       string_expand(script_path),
-                                       string_expand(script_file));
+    String8 bat_path = push_u8_stringf(scratch, "%S/%S.bat", script_path, script_file);
     result.bat_exists = file_exists(app, bat_path);
   }
   {
     Scratch_Block scratch(app);
-    String8 sh_path = push_u8_stringf(scratch, "%.*s/%.*s.sh",
-                                      string_expand(script_path),
-                                      string_expand(script_file));
+    String8 sh_path = push_u8_stringf(scratch, "%S/%S.sh", script_path, script_file);
     result.sh_exists = file_exists(app, sh_path);
   }
   {
     Scratch_Block scratch(app);
-    String8 project_path = push_u8_stringf(scratch, "%.*s/project.4coder",
-                                           string_expand(script_path));
+    String8 project_path = push_u8_stringf(scratch, "%S/project.4coder", script_path);
     result.sh_exists = file_exists(app, project_path);
   }
   result.everything_exists = (result.bat_exists && result.sh_exists && result.project_exists);
@@ -390,9 +383,7 @@ prj_generate_bat(Arena *scratch, String8 opts, String8 compiler, String8 script_
   od = string_mod_replace_character(od, '/', '\\');
   bf = string_mod_replace_character(bf, '/', '\\');
 
-  String8 file_name = push_u8_stringf(scratch, "%.*s/%.*s.bat",
-                                      string_expand(script_path),
-                                      string_expand(script_file));
+  String8 file_name = push_u8_stringf(scratch, "%S/%S.bat", script_path, script_file);
 
   FILE *bat_script = fopen((char*)file_name.str, "wb");
   if (bat_script != 0){
@@ -422,9 +413,7 @@ prj_generate_sh(Arena *scratch, String8 opts, String8 compiler, String8 script_p
   String8 od = output_dir;
   String8 bf = binary_file;
 
-  String8 file_name = push_u8_stringf(scratch, "%.*s/%.*s.sh",
-                                      string_expand(script_path),
-                                      string_expand(script_file));
+  String8 file_name = push_u8_stringf(scratch, "%S/%S.sh", script_path, script_file);
 
   FILE *sh_script = fopen((char*)file_name.str, "wb");
   if (sh_script != 0){
@@ -457,7 +446,7 @@ prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, S
   String8 bf_win = string_replace(scratch, bf,
                                   string_u8_litexpr("/"), string_u8_litexpr("\\"));
 
-  String8 file_name = push_u8_stringf(scratch, "%.*s/project.4coder", string_expand(script_path));
+  String8 file_name = push_u8_stringf(scratch, "%S/project.4coder", script_path);
 
   FILE *out = fopen((char*)file_name.str, "wb");
   if (out != 0){
@@ -966,7 +955,7 @@ CUSTOM_DOC("Looks for a project.4coder file in the current directory and tries t
   String_ID proj_name_id = vars_string_id_from_var(proj_name_var);
   if (proj_name_id != 0){
     String8 proj_name = vars_read_string(scratch, proj_name_id);
-    String8 title = push_u8_stringf(scratch, "4coder project: %.*s", string_expand(proj_name));
+    String8 title = push_u8_stringf(scratch, "4coder project: %S", proj_name);
     set_window_title(app, title);
   }
 }
@@ -1051,7 +1040,7 @@ CUSTOM_DOC("Prints the current project to the file it was loaded from; prints in
     Scratch_Block scratch(app);
     String8 prj_full_path = prj_full_file_path_from_project(scratch, prj_var);
     prj_full_path = push_string_copy(scratch, prj_full_path);
-    String8 message = push_stringf(scratch, "Reprinting project file: %.*s\n", string_expand(prj_full_path));
+    String8 message = push_stringf(scratch, "Reprinting project file: %S\n", prj_full_path);
     print_message(app, message);
 
     String8List prj_string = {};

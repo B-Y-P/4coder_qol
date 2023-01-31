@@ -46,12 +46,12 @@ render_doc_page__content(Application_Links *app, Buffer_Insertion *insert, Doc_C
       insertf(insert, "*");
     }
 
-    insertf(insert, "%.*s", string_expand(content->text));
+    insertf(insert, "%S", content->text);
     if (content->page_link.size > 0){
-      insertf(insert, " (link page %.*s)", string_expand(content->page_link));
+      insertf(insert, " (link page %S)", content->page_link);
     }
     else if (content->block_link.size > 0){
-      insertf(insert, " (link block %.*s)", string_expand(content->block_link));
+      insertf(insert, " (link block %S)", content->block_link);
     }
 
     if (content->emphasis == DocContentEmphasis_Heavy){
@@ -87,7 +87,7 @@ render_doc_page__code(Application_Links *app, Buffer_Insertion *insert, Doc_Code
         insertf(insert, "Batch\n\n");
       }break;
     }
-    insertf(insert, "\n%.*s\n", string_expand(sample->contents));
+    insertf(insert, "\n%S\n", sample->contents);
   }
 }
 
@@ -109,8 +109,7 @@ function Buffer_ID
 render_doc_page(Application_Links *app, Doc_Page *page){
   Scratch_Block scratch(app);
 
-  String_Const_u8 doc_buffer_name = push_u8_stringf(scratch, "*doc: %.*s*",
-                                                    string_expand(page->name));
+  String_Const_u8 doc_buffer_name = push_u8_stringf(scratch, "*doc: %S*", page->name);
 
   Buffer_Create_Flag flags = BufferCreate_NeverAttachToFile;
   Buffer_ID buffer = create_buffer(app, doc_buffer_name, flags);
@@ -131,14 +130,12 @@ render_doc_page(Application_Links *app, Doc_Page *page){
       "----------------------------------------------------------------"
       "----------------------------------------------------------------";
 
-    insertf(&insert, "%.*s\n%.*s\n",
-            string_expand(page->title),
-            page->title.size, dashes);
+    insertf(&insert, "%S\n%.*s\n", page->title, page->title.size, dashes);
 
     for (Doc_Block *block = page->first_block;
          block != 0;
          block = block->next){
-      insertf(&insert, "%.*s\n\n", string_expand(block->name));
+      insertf(&insert, "%S\n\n", block->name);
 
       for (Doc_Paragraph *par = block->first_par;
            par != 0;

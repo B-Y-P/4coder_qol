@@ -568,8 +568,7 @@ BUFFER_NAME_RESOLVER_SIG(default_buffer_name_resolution){
 
             uniqueifier = SCu8(start, end);
             if (past_the_end){
-              uniqueifier = push_u8_stringf(scratch, "%.*s~%d",
-                                            string_expand(uniqueifier), i);
+              uniqueifier = push_u8_stringf(scratch, "%S~%d", uniqueifier, i);
             }
           }
           else{
@@ -897,17 +896,17 @@ BUFFER_HOOK_SIG(default_new_file){
 
   Buffer_Insertion insert = begin_buffer_insertion_at_buffered(app, buffer_id, 0, scratch, KB(16));
   insertf(&insert,
-          "/* date = %.*s */\n"
+          "/* date = %S */\n"
           "\n",
-          string_expand(date_string));
+          date_string);
   insertf(&insert,
-          "#ifndef %.*s\n"
-          "#define %.*s\n"
+          "#ifndef %S\n"
+          "#define %S\n"
           "\n"
-          "#endif //%.*s\n",
-          string_expand(guard),
-          string_expand(guard),
-          string_expand(guard));
+          "#endif //%S\n",
+          guard,
+          guard,
+          guard);
   end_buffer_insertion(&insert);
 
   return(0);

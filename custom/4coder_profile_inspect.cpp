@@ -76,8 +76,8 @@ profile_parse_record(Arena *arena, Profile_Inspection *insp,
 #undef M
       }
       else{
-#define M "Node '%.*s' closed by parent ending (or higher priority sibling starting)"
-        String_Const_u8 str = push_u8_stringf(arena, M, string_expand(name));
+#define M "Node '%S' closed by parent ending (or higher priority sibling starting)"
+        String_Const_u8 str = push_u8_stringf(arena, M, name);
         profile_parse_error(arena, insp, str, location);
 #undef M
         if (parent->id != 0){
@@ -575,19 +575,15 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
         String_Const_u8 string = {};
         if (inspect->selected_thread != 0){
           String_Const_u8 name = inspect->selected_thread->name;
-          string = push_u8_stringf(scratch, "%.*s (%d)",
-                                   string_expand(name),
-                                   inspect->selected_thread->thread_id);
+          string = push_u8_stringf(scratch, "%S (%d)", name, inspect->selected_thread->thread_id);
         }
         else if (inspect->selected_slot != 0){
           String_Const_u8 name = inspect->selected_slot->name;
-          string = push_u8_stringf(scratch, "block %.*s",
-                                   string_expand(name));
+          string = push_u8_stringf(scratch, "block %S", name);
         }
         else if (inspect->selected_node != 0){
           String_Const_u8 name = profile_node_name(inspect->selected_node);
-          string = push_u8_stringf(scratch, "node %.*s",
-                                   string_expand(name));
+          string = push_u8_stringf(scratch, "node %S", name);
         }
         else{
           inspect->tab_id = ProfileInspectTab_Threads;
@@ -780,8 +776,7 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
           Fancy_Line list = {};
           push_fancy_stringf(scratch, &list, fcolor_id(defcolor_pop2), "[%12llu] / %6d ",
                              node->total_memory, node->annotation.count);
-          push_fancy_stringf(scratch, &list, fcolor_id(defcolor_pop1), "%.*s",
-                             string_expand(node->location));
+          push_fancy_stringf(scratch, &list, fcolor_id(defcolor_pop1), "%S", node->location);
 
           Vec2_f32 p = V2f32(x.min + x_half_padding,
                              (y.min + y.max - line_height)*0.5f);
@@ -834,8 +829,7 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
 
       if (inspect->full_name_hovered.size > 0){
         Fancy_Line *line = push_fancy_line(scratch, &block, text_color);
-        push_fancy_stringf(scratch, line, "%.*s",
-                           string_expand(inspect->full_name_hovered));
+        push_fancy_stringf(scratch, line, "%S", inspect->full_name_hovered);
         if (inspect->unique_counter_hovered > 0){
           push_fancy_stringf(scratch, line, text_color, 0.5f, 0.f,
                              "#%4llu", inspect->unique_counter_hovered);
@@ -843,8 +837,7 @@ profile_render(Application_Links *app, Frame_Info frame_info, View_ID view){
       }
       if (inspect->location_jump_hovered.size > 0){
         Fancy_Line *line = push_fancy_line(scratch, &block, text_color);
-        push_fancy_stringf(scratch, line, "[shift] '%.*s'",
-                           string_expand(inspect->location_jump_hovered));
+        push_fancy_stringf(scratch, line, "[shift] '%S'", inspect->location_jump_hovered);
       }
 
       draw_tool_tip(app, face_id, &block, m_p, region,

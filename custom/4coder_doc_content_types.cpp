@@ -82,7 +82,7 @@ new_doc_page(Arena *arena, Doc_Cluster *cluster, char *title, char *name){
 
 function Doc_Page*
 new_doc_page_normal_title(Arena *arena, Doc_Cluster *cluster, char *title, char *name){
-  String_Const_u8 full_title = push_u8_stringf(arena, "%s - %.*s", title, string_expand(cluster->title));
+  String_Const_u8 full_title = push_u8_stringf(arena, "%s - %S", title, cluster->title);
   return(new_doc_page(arena, cluster, (char*)full_title.str, name));
 }
 

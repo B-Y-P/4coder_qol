@@ -810,21 +810,21 @@ log_graph_render(Application_Links *app, Frame_Info frame_info, View_ID view){
             if (filter->kind == LogFilter_TagValue){
               push_fancy_stringf(scratch, &line, f_white, "val  [");
               String_Const_u8 tag_name = log_parse__get_string(&log_parse, filter->tag_name_code);
-              push_fancy_stringf(scratch, &line, f_green, "%.*s", string_expand(tag_name));
+              push_fancy_stringf(scratch, &line, f_green, "%S", tag_name);
               push_fancy_stringf(scratch, &line, f_white, "=");
               if (filter->tag_value.kind == LogTagKind_Integer){
                 push_fancy_stringf(scratch, &line, f_pink, "0x%llx", filter->tag_value.value_s);
               }
               else if (filter->tag_value.kind == LogTagKind_String){
                 String_Const_u8 value = log_parse__get_string(&log_parse, filter->tag_value.value);
-                push_fancy_stringf(scratch, &line, f_pink, "%.*s", string_expand(value));
+                push_fancy_stringf(scratch, &line, f_pink, "%S", value);
               }
               push_fancy_stringf(scratch, &line, f_white, "]");
             }
             else{
               push_fancy_stringf(scratch, &line, f_white, "name [");
               String_Const_u8 tag_name = log_parse__get_string(&log_parse, filter->tag_name_code);
-              push_fancy_stringf(scratch, &line, f_green, "%.*s", string_expand(tag_name));
+              push_fancy_stringf(scratch, &line, f_green, "%S", tag_name);
               push_fancy_stringf(scratch, &line, f_white, "]");
             }
 
@@ -857,7 +857,7 @@ log_graph_render(Application_Links *app, Frame_Info frame_info, View_ID view){
           Fancy_Line line = {};
           String_Const_u8 file_name = log_parse__get_string(&log_parse, view_event->src_file_name);
           push_fancy_stringf(scratch, &line, f_green, "[%d]  ", view_event->event_number);
-          push_fancy_stringf(scratch, &line, f_white, "%.*s:", string_expand(file_name));
+          push_fancy_stringf(scratch, &line, f_white, "%S:", file_name);
           push_fancy_stringf(scratch, &line, f_pink, "%llu", view_event->line_number);
 
           Vec2_f32 right_p = V2f32(box_inner.x1 - 3.f, y_cursor);

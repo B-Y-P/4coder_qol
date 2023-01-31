@@ -337,8 +337,7 @@ require_key_identifier(Reader *reader, String_Const_u8 string, i64 *opt_pos_out)
 
   if (!success){
     Temp_Memory temp = begin_temp(reader->error_arena);
-    String_Const_u8 error_string = push_u8_stringf(reader->error_arena, "expected to find '%.*s'",
-                                                   string.size, string.str);
+    String_Const_u8 error_string = push_u8_stringf(reader->error_arena, "expected to find '%S'", string);
     error(reader, token.pos, error_string.str);
     end_temp(temp);
   }
@@ -851,8 +850,8 @@ main(int argc, char **argv){
 
   out_directory = string_skip_chop_whitespace(out_directory);
 
-  String_Const_u8 cmd_out_name = push_u8_stringf(arena, "%.*s/%s",
-                                                 string_expand(out_directory),
+  String_Const_u8 cmd_out_name = push_u8_stringf(arena, "%S/%s",
+                                                 out_directory,
                                                  COMMAND_METADATA_OUT);
   FILE *cmd_out = fopen((char*)cmd_out_name.str, "wb");
 
@@ -940,8 +939,8 @@ main(int argc, char **argv){
     fprintf(stdout, "fatal error: could not open output file %.*s\n", string_expand(cmd_out_name));
   }
 
-  String_Const_u8 id_out_name = push_u8_stringf(arena, "%.*s/%s",
-                                                string_expand(out_directory),
+  String_Const_u8 id_out_name = push_u8_stringf(arena, "%S/%s",
+                                                out_directory,
                                                 ID_METADATA_OUT);
   FILE *id_out = fopen((char*)id_out_name.str, "wb");
 
