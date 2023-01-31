@@ -164,7 +164,7 @@ print_positions_buffered(Application_Links *app, Buffer_Insertion *out, Buffer_I
 
     Token_Array array = get_token_array_from_buffer(app, buffer);
     if (array.tokens != 0){
-      insertf(out, "%.*s:%lld: ", string_expand(buffer_name), line_number);
+      insertf(out, "%S:%lld: ", buffer_name, line_number);
 
       Token prev_token = {};
       Token_Iterator_Array it = token_iterator_index(buffer, &array, start_index);

@@ -29,8 +29,7 @@ dynamic_binding_load_from_file(Application_Links *app, Mapping *mapping, String_
   String_Const_u8 full_path = def_search_get_full_path(scratch, &search_list, filename_copied);
 
   {
-    String8 message = push_stringf(scratch, "loading bindings: %.*s\n",
-                                   string_expand(full_path));
+    String8 message = push_stringf(scratch, "loading bindings: %S\n", full_path);
     print_message(app, message);
   }
 

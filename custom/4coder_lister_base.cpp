@@ -851,8 +851,8 @@ run_lister_with_refresh_handler(Application_Links *app, Arena *arena, String_Con
     result = run_lister(app, lister);
   }
   else{
-#define M "ERROR: No refresh handler specified for lister (query_string = \"%.*s\")\n"
-    String_Const_u8 str = push_u8_stringf(arena, M, string_expand(query));
+#define M "ERROR: No refresh handler specified for lister (query_string = \"%S\")\n"
+    String_Const_u8 str = push_u8_stringf(arena, M, query);
 #undef M
     print_message(app, str);
     result.canceled = true;

@@ -92,7 +92,7 @@ lock_jump_buffer(Application_Links *app, String_Const_u8 name){
     Scratch_Block scratch(app);
     String_Const_u8 escaped = string_escape(scratch, name);
     LogEventF(log_string(app, M), scratch, 0, 0, system_thread_get_id(),
-              "lock jump buffer [name=\"%.*s\"]", string_expand(escaped));
+              "lock jump buffer [name=\"%S\"]", escaped);
   }
 }
 
@@ -546,7 +546,7 @@ CUSTOM_DOC("Loads all the theme files in the default theme folder.")
        node != 0;
        node = node->next){
     String8 folder_path = node->string;
-    String8 themes_path = push_u8_stringf(scratch, "%.*sthemes", string_expand(folder_path));
+    String8 themes_path = push_u8_stringf(scratch, "%Sthemes", folder_path);
     load_folder_of_themes_into_live_set(app, themes_path);
   }
 }
@@ -651,9 +651,7 @@ default_4coder_initialize(Application_Links *app, String_Const_u8_Array file_nam
   for (i32 i = 0; i < file_names.count; i += 1){
     Temp_Memory_Block temp(scratch);
     String_Const_u8 input_name = file_names.vals[i];
-    String_Const_u8 full_name = push_u8_stringf(scratch, "%.*s/%.*s",
-                                                string_expand(hot_directory),
-                                                string_expand(input_name));
+    String_Const_u8 full_name = push_u8_stringf(scratch, "%S/%S", hot_directory, input_name);
     Buffer_ID new_buffer = create_buffer(app, full_name, BufferCreate_NeverNew|BufferCreate_MustAttachToFile);
     if (new_buffer == 0){
       create_buffer(app, input_name, 0);

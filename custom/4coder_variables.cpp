@@ -325,10 +325,9 @@ vars_print_indented(Application_Links *app, Variable_Handle var, i32 indent){
   String_Const_u8 var_key = vars_key_from_var(scratch, var);
   String_Const_u8 var_val = vars_string_from_var(scratch, var);
 
-  String_Const_u8 line = push_stringf(scratch, "%.*s%.*s: \"%.*s\"\n",
+  String_Const_u8 line = push_stringf(scratch, "%.*s%S: \"%S\"\n",
                                       clamp_top(indent, sizeof(spaces)), spaces,
-                                      string_expand(var_key),
-                                      string_expand(var_val));
+                                      var_key, var_val);
   print_message(app, line);
 
   i32 sub_indent = indent + 1;

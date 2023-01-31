@@ -247,7 +247,7 @@ CUSTOM_DOC("Paste multiple entries from the clipboard at once")
 
         String_Const_u8 string = push_clipboard_index(scratch, 0, paste_index);
 
-        String_Const_u8 insert_string = push_u8_stringf(scratch, "\n%.*s", string_expand(string));
+        String_Const_u8 insert_string = push_u8_stringf(scratch, "\n%S", string);
 
         Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
         Range_i64 range = get_view_range(app, view);
