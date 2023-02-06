@@ -10,6 +10,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 
 ---
 
+
 ### Table of Contents
 - [PRE - Some cleaning up before properly starting](#pre)
 - [00 - add custom render hook                    ](#c00)
@@ -19,6 +20,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [04 - cursor styles                             ](#c04)
 - [05 - hex colors                                ](#c05)
 - [06 - code index syntax highlighting            ](#c06)
+- [07 - home scrolls view left                    ](#c07)
 
 ---
 
@@ -101,6 +103,17 @@ Looking at `Code_Index_Note_Kind` we can see we also have `CodeIndexNote_Type` a
 Seems like a perfectly reasonable thing to make customizable by users\
 We'll declare them using `CUSTOM_ID(colors, ...)` which allows 4coder's metadata generator to see them\
 Now we can use those in our theme the same as all the other colors
+
+</br>
+
+### 07 - home scrolls view left <a name="c07"/>
+Now on to some quality of life features\
+4coder by default only scrolls to keep the cursor in view\
+This is fine vertically, but when I hit the `<home>` key I want to scroll all the way back
+
+Same idea for the metadata generator when using `CUSTOM_COMMAND_SIG` and `CUSTOM_DOC`\
+We can add our `qol_home` command to our `bindings.4coder`\
+In case the user is missing this file, we can provide `qol_setup_default_mapping` at init
 
 </br>
 

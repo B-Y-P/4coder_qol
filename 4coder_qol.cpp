@@ -16,7 +16,9 @@ CUSTOM_ID(colors, defcolor_macro);
 global Vec2_f32 qol_cur_cursor_pos;
 global Vec2_f32 qol_nxt_cursor_pos;
 
+#include "4coder_qol_commands.cpp"
 #include "4coder_qol_draw.cpp"
+#include "4coder_qol_bindings.cpp"
 #include "4coder_qol_hooks.cpp"
 
 #if !defined(META_PASS)
@@ -62,7 +64,7 @@ void custom_layer_init(Application_Links *app){
 #if OS_MAC
   setup_mac_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
 #else
-  setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+  qol_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
 #endif
   setup_essential_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
 }
