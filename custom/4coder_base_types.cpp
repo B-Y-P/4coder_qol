@@ -319,6 +319,11 @@ abs_f32(f32 x){
 #include <math.h>
 
 function f32
+pow_f32(f32 x, f32 y){
+  return(powf(x, y));
+}
+
+function f32
 mod_f32(f32 x, i32 m){
   f32 whole;
   f32 frac = modff(x, &whole);
