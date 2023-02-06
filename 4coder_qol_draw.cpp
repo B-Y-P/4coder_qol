@@ -13,6 +13,44 @@ function QOL_Cursor_Kind qol_cursor_kind(String_Const_u8 str){
 }
 
 function void
+qol_draw_hex_color(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Layout_ID text_layout_id){
+  Scratch_Block scratch(app);
+  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
+  String_Const_u8 buffer_string = push_buffer_range(app, scratch, buffer, visible_range);
+
+  for (i64 i = 0; i+9 < range_size(visible_range); i += 1){
+    u8 *str = buffer_string.str+i;
+    bool s0 = str[0] != '0';
+    bool s1 = str[1] != 'x';
+    if (s0 || s1){ continue; }
+
+    b32 all_hex = true;
+    for (i64 j = 0; j < 8; j += 1){
+      u8 c = str[j+2];
+      bool is_digit = '0' <= c && c <= '9';
+      bool is_lower = 'a' <= c && c <= 'f';
+      bool is_upper = 'A' <= c && c <= 'F';
+      if (!(is_digit || is_lower || is_upper)) { all_hex=false; break; }
+    }
+    if (!all_hex){ continue; }
+
+    i64 pos = visible_range.min + i;
+    Rect_f32 r0 = text_layout_character_on_screen(app, text_layout_id, pos+0);
+    Rect_f32 r1 = text_layout_character_on_screen(app, text_layout_id, pos+9);
+    Rect_f32 rect = rect_inner(rect_union(r0, r1), -1.f);
+
+    ARGB_Color color = ARGB_Color(string_to_integer(SCu8(str+2, 8), 16));
+    u32 sum = ((color >> 16) & 0xFF) + ((color >> 8) & 0xFF) + (color & 0xFF);
+    ARGB_Color contrast = ARGB_Color(0xFF000000 | (i32(sum > 330)-1));
+
+    draw_rectangle_outline(app, rect_inner(rect, -2.f), 10.f, 4.f, contrast);
+    draw_rectangle(app, rect, 8.f, color);
+    paint_text_color(app, text_layout_id, Ii64_size(pos, 10), contrast);
+    i += 9;
+  }
+}
+
+function void
 qol_draw_cursor_mark(Application_Links *app, View_ID view_id, b32 is_active_view,
                      Buffer_ID buffer, Text_Layout_ID text_layout_id,
                      f32 roundness, f32 outline_thickness){
@@ -183,6 +221,11 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
     else{
       draw_whitespace_highlight(app, text_layout_id, &token_array, cursor_roundness);
     }
+  }
+
+  b32 show_hex_colors = def_get_config_b32(vars_save_string_lit("show_hex_colors"));
+  if (show_hex_colors){
+    qol_draw_hex_color(app, view_id, buffer, text_layout_id);
   }
 
   // NOTE(allen): Cursor

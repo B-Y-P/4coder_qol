@@ -25,6 +25,7 @@ enable_output_wrapping = false;
 highlight_line_at_cursor = true;
 
 filebar_on_top = false;
+show_hex_colors = true;
 
 // ""  - Rectangle
 // "|" - Thin-line
