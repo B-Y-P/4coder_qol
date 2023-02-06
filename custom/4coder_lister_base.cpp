@@ -298,6 +298,7 @@ lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   for (i32 i = first_index; i < count; i += 1){
     Lister_Node *node = lister->filtered.node_ptrs[i];
 
+    if (y_pos >= region.y1){ break; }
     Range_f32 y = If32(y_pos, y_pos + block_height);
     y_pos = y.max;
 
