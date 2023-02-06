@@ -9,6 +9,10 @@
 
 #include "4coder_qol_helper.h"
 
+CUSTOM_ID(colors, defcolor_type);
+CUSTOM_ID(colors, defcolor_function);
+CUSTOM_ID(colors, defcolor_macro);
+
 global Vec2_f32 qol_cur_cursor_pos;
 global Vec2_f32 qol_nxt_cursor_pos;
 
