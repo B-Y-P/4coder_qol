@@ -5,6 +5,10 @@
 
 //#define AUTO_CENTER_AFTER_JUMPS true
 
+CUSTOM_ID(colors, defcolor_type);
+CUSTOM_ID(colors, defcolor_function);
+CUSTOM_ID(colors, defcolor_macro);
+
 #include "4coder_default_include.cpp"
 
 #include "4coder_qol_helper.h"

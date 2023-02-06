@@ -18,6 +18,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [03 - interpolate cursor                        ](#c03)
 - [04 - cursor styles                             ](#c04)
 - [05 - hex colors                                ](#c05)
+- [06 - code index syntax highlighting            ](#c06)
 
 ---
 
@@ -89,6 +90,17 @@ This lets us pick either black or white to contrast accordingly\
 
 One thing you might notice is calling `paint_text_color` before drawing the rectangles doesn't change the result\
 The color of the text is associated with the text layout drawn later on in `draw_text_layout_default`
+
+</br>
+
+### 06 - code index syntax highlighting <a name="c06"/>
+Now we can get a better sense for the themes colors, but there was a conspicuous block of code `#if 0`'d out\
+Enabling it demonstrates `CodeIndexNote_Function` syntax-highlighting from 4coder's code index\
+Looking at `Code_Index_Note_Kind` we can see we also have `CodeIndexNote_Type` and `CodeIndexNote_Macro` as well
+
+Seems like a perfectly reasonable thing to make customizable by users\
+We'll declare them using `CUSTOM_ID(colors, ...)` which allows 4coder's metadata generator to see them\
+Now we can use those in our theme the same as all the other colors
 
 </br>
 
