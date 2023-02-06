@@ -7,7 +7,13 @@
 
 #include "4coder_default_include.cpp"
 
+#include "4coder_qol_helper.h"
+
+global Vec2_f32 qol_cur_cursor_pos;
+global Vec2_f32 qol_nxt_cursor_pos;
+
 #include "4coder_qol_draw.cpp"
+#include "4coder_qol_hooks.cpp"
 
 #if !defined(META_PASS)
 #include "generated/managed_id_metadata.cpp"
@@ -23,7 +29,7 @@ void custom_layer_init(Application_Links *app){
     set_custom_hook(app, HookID_BufferViewerUpdate, default_view_adjust);
 
     set_custom_hook(app, HookID_ViewEventHandler, default_view_input_handler);
-    set_custom_hook(app, HookID_Tick, default_tick);
+    set_custom_hook(app, HookID_Tick, qol_tick);
     set_custom_hook(app, HookID_RenderCaller, qol_render_caller);
     set_custom_hook(app, HookID_WholeScreenRenderCaller, default_whole_screen_render_caller);
 

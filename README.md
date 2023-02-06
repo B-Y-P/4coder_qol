@@ -15,6 +15,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [00 - add custom render hook                    ](#c00)
 - [01 - bottom filebars                           ](#c01)
 - [02 - config determines filebar position        ](#c02)
+- [03 - interpolate cursor                        ](#c03)
 
 ---
 
@@ -47,6 +48,22 @@ Not exactly the best user experience, so let's at least do away with the require
 
 The convenient thing about the config.4coder file is that you can declare your own keywords\
 It also helps that this is just a text file which we can load (and reload) whenever we like
+
+</br>
+
+### 03 - interpolate cursor <a name="c03"/>
+Now let's get a little fancier. Sure the scrolling is smooth, but the cursor teleports with no temporal coherency\
+By tracking a `qol_cur_cursor_pos` and  `qol_nxt_cursor_pos` (sorry, not sorry for the naming convention :P)\
+we can make use of [lerp smoothing](https://www.youtube.com/watch?v=LSNQuFEDOyQ)
+
+Now it's `qol_nxt_cursor_pos` which logically 'teleports', while `qol_cur_cursor_pos` smoothly interpolates towards it\
+If that's all we did, our cursor won't always finish interpolating\
+This is because 4coder by default doesn't update every frame\
+When the app is idle, it shouldn't drain your battery. It only updates when necessary
+
+We can inform 4coder we still need updates by calling `animate_in_n_milliseconds` as necessary\
+We'll do this whenever the cursor is still more than half a pixel away from it's target\
+Now we can always finish our animation, but still idle as needed
 
 </br>
 
