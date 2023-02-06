@@ -13,11 +13,30 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 ### Table of Contents
 - [PRE - Some cleaning up before properly starting](#pre)
 - [00 - add custom render hook                    ](#c00)
+- [01 - bottom filebars                           ](#c01)
 
 ---
 
+</br>
+
 ### 00 - add custom render hook <a name="c00"/>
 Starting simple by merely replacing the render hook with a copy-pasted version of our own
+
+</br>
+
+#### 01 - bottom filebars <a name="c01"/>
+Now that we can customize our rendering\
+Changing `layout_file_bar_on_top` -> `layout_file_bar_on_bot` is straight-forward enough,\
+but if you left it there, you'd get some very different results
+
+The takeaway here would be that 4coder uses a "y-is-down" convention\
+Meaning y-values increase the further down the screen you go\
+So when splitting a rectangle into a top and bottom pair,\
+the `pair.min` will be the top, and `pair.max` will be the bottom
+
+The next thing to do is modify the `buffer_region` hook accordingly\
+This keeps the rest of the code up-to-date on what region of the view is dedicated to text\
+Now existing code which calls `view_get_buffer_region` is kept correct after our customizations
 
 </br>
 
