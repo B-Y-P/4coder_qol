@@ -7,6 +7,8 @@
 
 #include "4coder_default_include.cpp"
 
+#include "4coder_qol_draw.cpp"
+
 #if !defined(META_PASS)
 #include "generated/managed_id_metadata.cpp"
 #endif
@@ -22,7 +24,7 @@ void custom_layer_init(Application_Links *app){
 
     set_custom_hook(app, HookID_ViewEventHandler, default_view_input_handler);
     set_custom_hook(app, HookID_Tick, default_tick);
-    set_custom_hook(app, HookID_RenderCaller, default_render_caller);
+    set_custom_hook(app, HookID_RenderCaller, qol_render_caller);
     set_custom_hook(app, HookID_WholeScreenRenderCaller, default_whole_screen_render_caller);
 
     set_custom_hook(app, HookID_DeltaRule, fixed_time_cubic_delta);
