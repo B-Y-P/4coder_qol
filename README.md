@@ -27,6 +27,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [13 - reloading helpers](#c13)
 - [14 - file explorer command](#c14)
 - [15 - modal auto-complete {} on enter](#c15)
+- [16 - bump column edit spaces](#c16)
 
 ---
 
@@ -192,6 +193,15 @@ but if in a jump buffer, it gets handled when taking the jump for the  current l
 So first we try to get a buffer using `Access_ReadWriteVisible` and if it fails, it might be `Access_ReadVisible`\
 This let's us forward the behavior back to `goto_jump_at_cursor`\
 Otherwise, we'll do the standard close-brace insert when necessary
+
+</br>
+
+### 16 - bump column edit spaces <a name="c16"/>
+Common thing I automate when using APIs that frequently fill out structs is to align the `=` chars\
+This lets me place the cursor on the right-most char, place a column\
+Then while holding shift, repeat `↑ ← <Space>` as necessary
+
+Also serves the double purpose of allowing me to place a vertical visual guide
 
 
 </br>
