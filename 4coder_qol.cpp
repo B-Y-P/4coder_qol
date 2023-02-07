@@ -12,6 +12,9 @@ CUSTOM_ID(colors, defcolor_macro);
 #include "4coder_default_include.cpp"
 
 #include "4coder_qol_helper.h"
+#include "4coder_qol_block.cpp"
+
+#include "4coder_qol_helper.h"
 
 global b32 qol_opened_brace = false;
 global u8 qol_target_char;

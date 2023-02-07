@@ -51,6 +51,40 @@ qol_draw_hex_color(Application_Links *app, View_ID view, Buffer_ID buffer, Text_
 }
 
 function void
+qol_draw_scopes(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Layout_ID text_layout_id, f32 width){
+  Scratch_Block scratch(app);
+  i64 pos = view_get_cursor_pos(app, view);
+  Rect_f32 prev_clip = draw_set_clip(app, Rect_f32{});
+  Rect_f32 view_rect = prev_clip;
+  view_rect.x0 -= 3.f;
+
+  Range_i64_Array ranges = get_enclosure_ranges(app, scratch, buffer, pos, FindNest_Scope);
+  for (i64 i = 0; i < ranges.count; i += 1){
+    FColor color = fcolor_id(i == 0 ? defcolor_preproc : defcolor_ghost_character);
+    Range_i64 range = ranges.ranges[i];
+    range.max -= 1;
+
+    u8 c0 = buffer_get_char(app, buffer, range.min);
+    u8 c1 = buffer_get_char(app, buffer, range.max);
+    if ((c0 != '{' && c0 != '(') || (c1 != '}' && c1 != ')')){ continue; }
+    paint_text_color_pos(app, text_layout_id, range.min, color);
+    paint_text_color_pos(app, text_layout_id, range.max, color);
+
+    i64 line0 = get_line_number_from_pos(app, buffer, range.min);
+    i64 line1 = get_line_number_from_pos(app, buffer, range.max);
+    if (line0 == line1){ continue; }
+
+    Rect_f32 scope_rect = qol_get_abs_block_rect(app, view, buffer, text_layout_id, range);
+    scope_rect.p0 -= V2f32(3.f, 4.f);
+    scope_rect.x1 += 10.f;
+    Rect_f32 clip_rect = Rf32(scope_rect.p0, V2f32(scope_rect.x0 + 3.f + width, scope_rect.y1));
+    draw_set_clip(app, rect_intersect(view_rect, clip_rect));
+    draw_rectangle_outline_fcolor(app, scope_rect, 5.f, 2.f, color);
+  }
+  draw_set_clip(app, prev_clip);
+}
+
+function void
 qol_draw_cursor_mark(Application_Links *app, View_ID view_id, b32 is_active_view,
                      Buffer_ID buffer, Text_Layout_ID text_layout_id,
                      f32 roundness, f32 outline_thickness){
@@ -189,6 +223,15 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
     }
   }
 
+  // NOTE(allen): Line highlight
+  b32 highlight_line_at_cursor = def_get_config_b32(vars_save_string_lit("highlight_line_at_cursor"));
+  if (highlight_line_at_cursor && is_active_view){
+    i64 line_number = get_line_number_from_pos(app, buffer, cursor_pos);
+    draw_line_highlight(app, text_layout_id, line_number, fcolor_id(defcolor_highlight_cursor_line));
+  }
+
+  qol_draw_scopes(app, view_id, buffer, text_layout_id, metrics.normal_advance);
+
   b32 use_error_highlight = def_get_config_b32(vars_save_string_lit("use_error_highlight"));
   b32 use_jump_highlight = def_get_config_b32(vars_save_string_lit("use_jump_highlight"));
   if (use_error_highlight || use_jump_highlight){
@@ -215,13 +258,6 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   if (use_paren_helper){
     Color_Array colors = finalize_color_array(defcolor_text_cycle);
     draw_paren_highlight(app, buffer, text_layout_id, cursor_pos, colors.vals, colors.count);
-  }
-
-  // NOTE(allen): Line highlight
-  b32 highlight_line_at_cursor = def_get_config_b32(vars_save_string_lit("highlight_line_at_cursor"));
-  if (highlight_line_at_cursor && is_active_view){
-    i64 line_number = get_line_number_from_pos(app, buffer, cursor_pos);
-    draw_line_highlight(app, text_layout_id, line_number, fcolor_id(defcolor_highlight_cursor_line));
   }
 
   // NOTE(allen): Whitespace highlight
