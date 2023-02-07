@@ -13,6 +13,8 @@ CUSTOM_ID(colors, defcolor_macro);
 
 #include "4coder_qol_helper.h"
 
+global b32 qol_opened_brace = false;
+
 global Vec2_f32 qol_cur_cursor_pos;
 global Vec2_f32 qol_nxt_cursor_pos;
 
