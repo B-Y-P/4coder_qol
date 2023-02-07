@@ -16,6 +16,10 @@ CUSTOM_ID(colors, defcolor_macro);
 global Vec2_f32 qol_cur_cursor_pos;
 global Vec2_f32 qol_nxt_cursor_pos;
 
+global Color_Table qol_cur_colors;
+global Color_Table qol_nxt_colors;
+
+#include "4coder_qol_colors.cpp"
 #include "4coder_qol_commands.cpp"
 #include "4coder_qol_draw.cpp"
 #include "4coder_qol_bindings.cpp"
@@ -60,11 +64,5 @@ void custom_layer_init(Application_Links *app){
   String_ID global_map_id = vars_save_string_lit("keys_global");
   String_ID file_map_id = vars_save_string_lit("keys_file");
   String_ID code_map_id = vars_save_string_lit("keys_code");
-
-#if OS_MAC
-  setup_mac_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
-#else
-  qol_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
-#endif
   qol_setup_essential_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
 }
