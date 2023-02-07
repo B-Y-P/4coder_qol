@@ -3,6 +3,7 @@
 #define LANG_NAME_CAMEL Cpp
 
 #include "lexer_generator/4coder_lex_gen_main.cpp"
+#include "4coder_qol_token.h"
 
 internal void
 build_language_model(void){
@@ -156,45 +157,15 @@ build_language_model(void){
 	Keyword_Set *main_keys = sm_begin_key_set("main_keys");
 
 	sm_select_base_kind(TokenBaseKind_Keyword);
-	sm_key("Auto");
-	sm_key("Void");
-	sm_key("Bool");
-	sm_key("Char");
-	sm_key("Int");
-	sm_key("Float");
-	sm_key("Double");
-	sm_key("Long");
-	sm_key("Short");
-	sm_key("Unsigned");
-	sm_key("Signed");
 	sm_key("Const");
 	sm_key("ConstExpr");
 	sm_key("Volatile");
 	sm_key("Asm");
-	sm_key("Break");
-	sm_key("Case");
-	sm_key("Catch");
-	sm_key("Continue");
-	sm_key("Default");
-	sm_key("Do");
-	sm_key("Else");
-	sm_key("For");
-	sm_key("Goto");
-	sm_key("If");
-	sm_key("Return");
-	sm_key("Switch");
-	sm_key("Try");
-	sm_key("While");
 	sm_key("StaticAssert", "static_assert");
 	sm_key("ConstCast", "const_cast");
 	sm_key("DynamicCast", "dynamic_cast");
 	sm_key("ReinterpretCast", "reinterpret_cast");
 	sm_key("StaticCast", "static_cast");
-	sm_key("Class");
-	sm_key("Enum");
-	sm_key("Struct");
-	sm_key("Typedef");
-	sm_key("Union");
 	sm_key("Template");
 	sm_key("Typename");
 	sm_key("Friend");
@@ -221,6 +192,42 @@ build_language_model(void){
 	sm_key("TypeID");
 	sm_key("New");
 	sm_key("Delete");
+
+	sm_select_base_kind(qol_TokenKind_Struct);
+	sm_key("Class");
+	sm_key("Enum");
+	sm_key("Struct");
+	sm_key("Typedef");
+	sm_key("Union");
+
+	sm_select_base_kind(qol_TokenKind_Primitive);
+	sm_key("Auto");
+	sm_key("Void");
+	sm_key("Bool");
+	sm_key("Char");
+	sm_key("Int");
+	sm_key("Float");
+	sm_key("Double");
+	sm_key("Long");
+	sm_key("Short");
+	sm_key("Unsigned");
+	sm_key("Signed");
+
+	sm_select_base_kind(qol_TokenKind_Control);
+	sm_key("Break");
+	sm_key("Case");
+	sm_key("Catch");
+	sm_key("Continue");
+	sm_key("Default");
+	sm_key("Do");
+	sm_key("Else");
+	sm_key("For");
+	sm_key("Goto");
+	sm_key("If");
+	sm_key("Return");
+	sm_key("Switch");
+	sm_key("Try");
+	sm_key("While");
 
 	sm_select_base_kind(TokenBaseKind_LiteralInteger);
 	sm_key("LiteralTrue", "true");
@@ -478,9 +485,9 @@ build_language_model(void){
 		sm_case("\n", emit);
 	}
 	{
-	Emit_Rule *emit = sm_emit_rule();
-	sm_emit_handler_direct("Backslash");
-	sm_fallback_peek(emit);
+		Emit_Rule *emit = sm_emit_rule();
+		sm_emit_handler_direct("Backslash");
+		sm_fallback_peek(emit);
 	}
 
 	////
@@ -539,8 +546,8 @@ build_language_model(void){
 	sm_case("Uu", U_number);
 	sm_case("L", L_number);
 	sm_case("l", l_number);
-	sm_case("Xx", number_hex_first);
-	sm_case("01234567", number_oct);
+	sm_case("XxBb", number_hex_first);
+	sm_case("01234567'", number_oct);
 	{
 		Emit_Rule *emit = sm_emit_rule();
 		sm_emit_handler_direct("LiteralInteger");
@@ -579,9 +586,9 @@ build_language_model(void){
 		sm_case("Ff", emit);
 	}
 	{
-	Emit_Rule *emit = sm_emit_rule();
-	sm_emit_handler_direct("LiteralFloat64");
-	sm_case("Ll", emit);
+		Emit_Rule *emit = sm_emit_rule();
+		sm_emit_handler_direct("LiteralFloat64");
+		sm_case("Ll", emit);
 	}
 	{
 		Emit_Rule *emit = sm_emit_rule();
@@ -633,7 +640,7 @@ build_language_model(void){
 
 	sm_select_state(number_hex_first);
 	sm_set_flag(is_hex, true);
-	sm_case("0123456789abcdefABCDEF", number_hex);
+	sm_case("0123456789abcdefABCDEF'", number_hex);
 	{
 		Emit_Rule *emit = sm_emit_rule();
 		sm_emit_handler_direct("LexError");
@@ -643,7 +650,7 @@ build_language_model(void){
 	////
 
 	sm_select_state(number_hex);
-	sm_case("0123456789abcdefABCDEF", number_hex);
+	sm_case("0123456789abcdefABCDEF'", number_hex);
 	sm_case("Uu", U_number);
 	sm_case("L", L_number);
 	sm_case("l", l_number);
@@ -657,7 +664,7 @@ build_language_model(void){
 
 	sm_select_state(number_oct);
 	sm_set_flag(is_oct, true);
-	sm_case("01234567", number_oct);
+	sm_case("01234567'", number_oct);
 	sm_case("Uu", U_number);
 	sm_case("L", L_number);
 	sm_case("l", l_number);
@@ -780,10 +787,10 @@ build_language_model(void){
 	sm_select_state(pp_directive_whitespace);
 	sm_case(" \t\f\v", pp_directive_whitespace);
 	sm_case_peek("abcdefghijklmnopqrstuvwxyz"
-		 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		 "_"
-		 "0123456789",
-		 pp_directive_first);
+				 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				 "_"
+				 "0123456789",
+				 pp_directive_first);
 	{
 		Emit_Rule *emit = sm_emit_rule();
 		sm_emit_handler_direct("LexError");
@@ -801,10 +808,10 @@ build_language_model(void){
 
 	sm_select_state(pp_directive);
 	sm_case("abcdefghijklmnopqrstuvwxyz"
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"_"
-		"0123456789",
-		pp_directive);
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"_"
+			"0123456789",
+			pp_directive);
 	sm_fallback_peek(pp_directive_emit);
 
 	////

@@ -59,4 +59,8 @@ attachment_tokens = managed_id_declare(app, string_u8_litexpr("attachment"), str
 defcolor_type = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_type"));
 defcolor_function = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_function"));
 defcolor_macro = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_macro"));
+defcolor_control = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_control"));
+defcolor_primitive = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_primitive"));
+defcolor_struct = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_struct"));
+defcolor_non_text = managed_id_declare(app, string_u8_litexpr("colors"), string_u8_litexpr("defcolor_non_text"));
 }
