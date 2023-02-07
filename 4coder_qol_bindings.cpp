@@ -14,7 +14,7 @@ qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 co
 
   SelectMap(file_id);
   ParentMap(global_id);
-  BindTextInput(write_text_input);
+  BindTextInput(qol_write_text_input);
   BindMouse(click_set_cursor_and_mark, MouseCode_Left);
   BindMouseRelease(click_set_cursor, MouseCode_Left);
   BindCore(click_set_cursor_and_mark, CoreCode_ClickActivateView);
@@ -22,7 +22,7 @@ qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 co
 
   SelectMap(code_id);
   ParentMap(file_id);
-  BindTextInput(write_text_and_auto_indent);
+  BindTextInput(qol_write_text_and_auto_indent);
 }
 
 function void
@@ -130,7 +130,7 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(undo,                        KeyCode_Z, KeyCode_Control);
   Bind(view_buffer_other_panel,     KeyCode_1, KeyCode_Control);
   Bind(swap_panels,                 KeyCode_2, KeyCode_Control);
-  Bind(if_read_only_goto_position,  KeyCode_Return);
+  Bind(qol_modal_return,            KeyCode_Return);
   Bind(if_read_only_goto_position_same_panel, KeyCode_Return, KeyCode_Shift);
   Bind(view_jump_list_with_lister,  KeyCode_Period, KeyCode_Control, KeyCode_Shift);
 
