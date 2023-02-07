@@ -34,6 +34,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [19 - bump column edit spaces                   ](#c19)
 - [20 - block functions and scope highlights      ](#c20)
 - [21 - custom lexer generator                    ](#c21)
+- [22 - custom cpp token kinds                    ](#c22)
 
 ---
 
@@ -243,6 +244,12 @@ For this to take effect, you need to run `build_lexer.bat` before running `build
 
 If I don't end up going into more detail later, I'll revise this description\
 For now, the tl;dr is "It's a DFA which is explicit on token emit, and has helpers for keywords and op-sets"
+
+</br>
+
+### 22 - custom cpp token kinds <a name="c22"/>
+Now that we can change how tokens get emmitted, we can also add the kinds of tokens we emit\
+So we can syntax highlight control flow, primitive types, and structural tokens differently
 
 </br>
 
