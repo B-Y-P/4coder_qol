@@ -18,6 +18,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [05 - code index syntax highlighting](#c05)
 - [06 - home scrolls view left](#c06)
 - [07 - scroll margins](#c99)   -- TODO update numbers
+- [07 - hot reload themes](#c07)
 
 ---
 
@@ -111,6 +112,13 @@ In case the user is missing this file, we can provide `qol_setup_default_mapping
 While the default behavior of scrolling once the cursor goes out of view is fine,\
 it's common to allow the user to define some margin to start scrolling sooner\
 So we'll add `scroll_margin_x` and `scroll_margin_y` in 'char-count' and 'line-count' resp.
+
+</br>
+
+### 07 - hot reload themes <a name="c07"/>
+Okay, so we have these text files we parse at runtime (`config.4coder`, `theme-<theme_name>.4coder`, `bindings.4coder` etc.)\
+But we haven't made it all that much easier to reload them at runtime\
+So let's add a hook on file save, and if it's one of our themes, update our table
 
 </br>
 
