@@ -33,6 +33,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [18 - modal auto-complete {} on enter           ](#c18)
 - [19 - bump column edit spaces                   ](#c19)
 - [20 - block functions and scope highlights      ](#c20)
+- [21 - custom lexer generator                    ](#c21)
 
 ---
 
@@ -232,6 +233,16 @@ Graphics intuition of "do this in model space, rather than screen space"
 
 Since I already had the code lying around, I included the methods for iterating the line ranges of a block selection\
 Maybe there will be a *future commit* which will have a use for them... ;)
+
+</br>
+
+### 21 - custom lexer generator <a name="c21"/>
+Oh boy, time to bring in the [4coder lexer](https://www.youtube.com/watch?v=Jw9kJKuh-RU)\
+For now, we'll just move some keywords around like `NULL` and `nullptr` and get it building\
+For this to take effect, you need to run `build_lexer.bat` before running `build.bat`
+
+If I don't end up going into more detail later, I'll revise this description\
+For now, the tl;dr is "It's a DFA which is explicit on token emit, and has helpers for keywords and op-sets"
 
 </br>
 
