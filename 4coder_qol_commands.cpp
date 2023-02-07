@@ -171,8 +171,55 @@ CUSTOM_DOC("[QOL] Prints Lines of Code")
 CUSTOM_COMMAND_SIG(qol_explorer)
 CUSTOM_DOC("[QOL] Opens file explorer in cwd")
 {
-	Scratch_Block scratch(app);
-	String_Const_u8 hot = push_hot_directory(app, scratch);
-	String_Const_u8 explorer = def_get_config_string(scratch, vars_save_string_lit("file_explorer_cli"));
-	exec_system_command(app, 0, buffer_identifier(0), hot, push_stringf(scratch, "%S .", explorer), 0);
+  Scratch_Block scratch(app);
+  String_Const_u8 hot = push_hot_directory(app, scratch);
+  String_Const_u8 explorer = def_get_config_string(scratch, vars_save_string_lit("file_explorer_cli"));
+  exec_system_command(app, 0, buffer_identifier(0), hot, push_stringf(scratch, "%S .", explorer), 0);
+}
+
+CUSTOM_COMMAND_SIG(qol_write_text_input)
+CUSTOM_DOC("[QOL] Inserts whatever text was used to trigger this command.")
+{
+  User_Input in = get_current_input(app);
+  String_Const_u8 insert = to_writable(&in);
+  write_text(app, insert);
+  qol_opened_brace = insert.size > 0 && insert.str[0] == '{';
+}
+
+CUSTOM_COMMAND_SIG(qol_write_text_and_auto_indent)
+CUSTOM_DOC("[QOL] Inserts whatever text was used to trigger this command.")
+{
+  User_Input in = get_current_input(app);
+  String_Const_u8 insert = to_writable(&in);
+  write_text_and_auto_indent(app);
+  qol_opened_brace = insert.size > 0 && insert.str[0] == '{';
+}
+
+CUSTOM_COMMAND_SIG(qol_modal_return)
+CUSTOM_DOC("[QOL] Either goto_jump_at_cursor or writes newline and completes {} when appropriate")
+{
+  View_ID view = get_active_view(app, Access_ReadVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+
+  if (buffer == 0){
+    buffer = view_get_buffer(app, view, Access_ReadVisible);
+    if (buffer != 0){
+      goto_jump_at_cursor(app);
+      lock_jump_buffer(app, buffer);
+    }
+  }
+  else{
+    i64 p0 = view_get_cursor_pos(app, view);
+    u8 c = buffer_get_char(app, buffer, p0-1);
+    if (qol_opened_brace && c == '{'){
+      write_text(app, string_u8_litexpr("\n\n}"));
+      i64 p1 = view_get_cursor_pos(app, view);
+      view_set_cursor_and_preferred_x(app, view, seek_pos(p0+1));
+      auto_indent_buffer(app, buffer, Ii64(p0, p1));
+      seek_end_of_line(app);
+    }
+    else{
+      write_text(app, string_u8_litexpr("\n"));
+    }
+  }
 }
