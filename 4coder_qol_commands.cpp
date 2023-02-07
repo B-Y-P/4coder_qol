@@ -161,3 +161,12 @@ CUSTOM_DOC("[QOL] Prints Lines of Code")
   }
   printf_message(app, "LOC: %'lld lines\n", loc);
 }
+
+CUSTOM_COMMAND_SIG(qol_explorer)
+CUSTOM_DOC("[QOL] Opens file explorer in cwd")
+{
+	Scratch_Block scratch(app);
+	String_Const_u8 hot = push_hot_directory(app, scratch);
+	String_Const_u8 explorer = def_get_config_string(scratch, vars_save_string_lit("file_explorer_cli"));
+	exec_system_command(app, 0, buffer_identifier(0), hot, push_stringf(scratch, "%S .", explorer), 0);
+}
