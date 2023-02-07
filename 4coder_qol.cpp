@@ -48,7 +48,7 @@ void custom_layer_init(Application_Links *app){
     set_custom_hook(app, HookID_BeginBuffer, default_begin_buffer);
     set_custom_hook(app, HookID_EndBuffer, end_buffer_close_jump_list);
     set_custom_hook(app, HookID_NewFile, default_new_file);
-    set_custom_hook(app, HookID_SaveFile, default_file_save);
+    set_custom_hook(app, HookID_SaveFile, qol_file_save);
     set_custom_hook(app, HookID_BufferEditRange, default_buffer_edit_range);
     set_custom_hook(app, HookID_BufferRegion, qol_buffer_region);
     set_custom_hook(app, HookID_ViewChangeBuffer, default_view_change_buffer);
