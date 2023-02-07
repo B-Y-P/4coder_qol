@@ -8,6 +8,7 @@
 #include "4coder_default_include.cpp"
 
 #include "4coder_qol_helper.h"
+#include "4coder_qol_block.cpp"
 
 CUSTOM_ID(colors, defcolor_type);
 CUSTOM_ID(colors, defcolor_function);
