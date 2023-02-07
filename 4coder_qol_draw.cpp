@@ -178,6 +178,17 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
     draw_scope_highlight(app, buffer, text_layout_id, cursor_pos, colors.vals, colors.count);
   }
 
+  if (qol_col_cursor.pos >= 0){
+    Buffer_Seek seek = seek_line_col(qol_col_cursor.line, qol_col_cursor.col);
+    Buffer_Cursor cursor = buffer_compute_cursor(app, buffer, seek);
+    Rect_f32 col_rect = text_layout_character_on_screen(app, text_layout_id, cursor.pos);
+    if (col_rect.x1 > 0.f){
+      col_rect.y0 = rect.y0;
+      col_rect.y1 = rect.y1;
+      draw_rectangle_fcolor(app, col_rect, 0.f, fcolor_id(defcolor_highlight_cursor_line));
+    }
+  }
+
   b32 use_error_highlight = def_get_config_b32(vars_save_string_lit("use_error_highlight"));
   b32 use_jump_highlight = def_get_config_b32(vars_save_string_lit("use_jump_highlight"));
   if (use_error_highlight || use_jump_highlight){
