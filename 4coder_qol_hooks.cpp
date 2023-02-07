@@ -1,4 +1,44 @@
 
+CUSTOM_COMMAND_SIG(qol_startup)
+CUSTOM_DOC("QOL command for responding to a startup event")
+{
+  ProfileScope(app, "qol startup");
+  User_Input input = get_current_input(app);
+  if (match_core_code(&input, CoreCode_Startup)){
+    String_Const_u8_Array file_names = input.event.core.file_names;
+    load_themes_default_folder(app);
+    default_4coder_initialize(app, file_names);
+    default_4coder_side_by_side_panels(app, file_names);
+
+    /// NOTE(BYP): Not ideal, but I'd rather simplify others testing 4coder_qol
+    String_ID global_map_id = vars_save_string_lit("keys_global");
+    String_ID file_map_id = vars_save_string_lit("keys_file");
+    String_ID code_map_id = vars_save_string_lit("keys_code");
+    qol_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+
+    b32 auto_load = def_get_config_b32(vars_save_string_lit("automatically_load_project"));
+    if (auto_load){
+      load_project(app);
+    }
+  }
+
+  {
+    def_audio_init();
+  }
+
+  {
+    def_enable_virtual_whitespace = def_get_config_b32(vars_save_string_lit("enable_virtual_whitespace"));
+    clear_all_layouts(app);
+  }
+
+  Scratch_Block scratch(app);
+  set_active_color(get_color_table_by_name(def_get_config_string(scratch, vars_save_string_lit("default_theme_name"))));
+  qol_cur_colors = qol_color_table_init(app);
+  qol_nxt_colors = qol_color_table_init(app);
+  qol_color_table_copy(qol_cur_colors, active_color_table);
+  qol_color_table_copy(qol_nxt_colors, active_color_table);
+}
+
 function void
 qol_tick(Application_Links *app, Frame_Info frame_info){
   default_tick(app, frame_info);
@@ -9,14 +49,16 @@ qol_tick(Application_Links *app, Frame_Info frame_info){
   if (!near_zero(qol_cur_cursor_pos - qol_nxt_cursor_pos, 0.5f)){
     animate_in_n_milliseconds(app, 0);
   }
+
+  qol_tick_colors(app, frame_info);
 }
 
 BUFFER_HOOK_SIG(qol_file_save){
   default_file_save(app, buffer_id);
 
   Scratch_Block scratch(app);
-  String_Const_u8 file_name = push_buffer_file_name(app, scratch, buffer_id);
-  String_Const_u8 name = string_front_of_path(file_name);
+  String_Const_u8 path = push_buffer_file_name(app, scratch, buffer_id);
+  String_Const_u8 name = string_front_of_path(path);
 
   String_Const_u8 target_prefix = string_u8_litexpr("theme-");
   String_Const_u8 target_suffix = string_u8_litexpr(".4coder");
@@ -27,30 +69,13 @@ BUFFER_HOOK_SIG(qol_file_save){
     Color_Table color_table = make_color_table(app, &global_theme_arena);
     Config *config = theme_parse__buffer(app, scratch, buffer_id, &global_theme_arena, &color_table);
     String_Const_u8 error_text = config_stringize_errors(app, scratch, config);
-    print_message(app, error_text);
 
-    u64 problem_score = 0;
-    if (color_table.count < defcolor_line_numbers_text){
-      problem_score = defcolor_line_numbers_text - color_table.count;
-    }
-    for (i32 i = 0; i < color_table.count; i += 1){
-      if (color_table.arrays[i].count == 0){
-        problem_score += 1;
-      }
-    }
-
-    if (error_text.size > 0 || problem_score >= 10){
-      String_Const_u8 string = push_u8_stringf(scratch, "There appears to be a problem parsing %S; no theme change applied\n", file_name);
-      print_message(app, string);
+    if (error_text.size > 0){
+      print_message(app, error_text);
+      printf_message(app, "There appears to be a problem parsing %S; no theme change applied\n", path);
     }
     else{
-      name = string_chop(name, 7);
-      save_theme(color_table, name);
-
-      Color_Table_Node *node = global_theme_list.last;
-      if (node != 0 && string_match(node->name, name)){
-        active_color_table = node->table;
-      }
+      qol_color_table_copy(qol_nxt_colors, color_table);
     }
   }
 
