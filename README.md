@@ -26,6 +26,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [12 - hot reload bindings.4coder](#c12)
 - [13 - reloading helpers](#c13)
 - [14 - file explorer command](#c14)
+- [15 - modal auto-complete {} on enter](#c15)
 
 ---
 
@@ -180,6 +181,17 @@ Let's expedite the process a bit. We won't give keybinds here, since they're muc
 
 ### 14 - file explorer command <a name="c14"/>
 I just wanted a faster way to open explorer in the current directory from 4coder... moving along
+
+</br>
+
+### 15 - modal auto-complete {} on enter <a name="c15"/>
+Standard text editor stuff, but there's a slight catch if we're not careful\
+Default behavior of enter will insert a `\n` when unhandled,\
+but if in a jump buffer, it gets handled when taking the jump for the  current line
+
+So first we try to get a buffer using `Access_ReadWriteVisible` and if it fails, it might be `Access_ReadVisible`\
+This let's us forward the behavior back to `goto_jump_at_cursor`\
+Otherwise, we'll do the standard close-brace insert when necessary
 
 
 </br>

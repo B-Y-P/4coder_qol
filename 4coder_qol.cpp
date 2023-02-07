@@ -13,6 +13,8 @@ CUSTOM_ID(colors, defcolor_type);
 CUSTOM_ID(colors, defcolor_function);
 CUSTOM_ID(colors, defcolor_macro);
 
+global b32 qol_opened_brace = false;
+
 global Vec2_f32 qol_cur_cursor_pos;
 global Vec2_f32 qol_nxt_cursor_pos;
 
