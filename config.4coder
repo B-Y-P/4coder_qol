@@ -26,6 +26,7 @@ highlight_line_at_cursor = true;
 
 filebar_on_top = false;
 show_hex_colors = true;
+file_explorer_cli = "explorer";   // non-Windows set to "open"
 
 // ""  - Rectangle
 // "|" - Thin-line
