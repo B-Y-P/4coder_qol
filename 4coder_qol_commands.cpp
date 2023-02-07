@@ -177,6 +177,85 @@ CUSTOM_DOC("[QOL] Opens file explorer in cwd")
   exec_system_command(app, 0, buffer_identifier(0), hot, push_stringf(scratch, "%S .", explorer), 0);
 }
 
+function i64
+qol_seek_char(Application_Links *app, Buffer_ID buffer, Scan_Direction direction, i64 start_pos, u8 target_char){
+  Scratch_Block scratch(app);
+  i64 line = get_line_number_from_pos(app, buffer, start_pos);
+  Range_i64 range = get_line_pos_range(app, buffer, line);
+  range.max += 1;
+  String_Const_u8 string = push_buffer_range(app, scratch, buffer, range);
+  i64 pos = start_pos;
+  while(range_contains(range, pos)){
+    pos += direction;
+    u8 current_char = string.str[pos - range.min];
+    if (current_char == target_char){ return pos; }
+  }
+  return start_pos;
+}
+
+CUSTOM_COMMAND_SIG(qol_char_forward)
+CUSTOM_DOC("[QOL] Seeks forward in current line to the selected char")
+{
+  View_ID view = get_active_view(app, Access_ReadVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  i64 cursor_pos = view_get_cursor_pos(app, view);
+  i64 pos = qol_seek_char(app, buffer, Scan_Forward, cursor_pos, qol_target_char);
+  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
+}
+
+CUSTOM_COMMAND_SIG(qol_char_backward)
+CUSTOM_DOC("[QOL] Seeks back in current line to the selected char")
+{
+  View_ID view = get_active_view(app, Access_ReadVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  i64 cursor_pos = view_get_cursor_pos(app, view);
+  i64 pos = qol_seek_char(app, buffer, Scan_Backward, cursor_pos, qol_target_char);
+  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
+}
+
+CUSTOM_COMMAND_SIG(qol_column_toggle)
+CUSTOM_DOC("[QOL] Toggles the column for bumping and selects hovered char")
+{
+  View_ID view = get_active_view(app, Access_ReadVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  if (qol_col_cursor.pos < 0){
+    i64 pos = view_get_cursor_pos(app, view);
+    qol_target_char = buffer_get_char(app, buffer, pos);
+    qol_col_cursor = buffer_compute_cursor(app, buffer, seek_pos(pos));
+  }
+  else{
+    qol_col_cursor.pos = -1;
+  }
+}
+
+CUSTOM_COMMAND_SIG(qol_write_space)
+CUSTOM_DOC("[QOL] Writes as many spaces needed for bumping to column")
+{
+  Scratch_Block scratch(app);
+  if (qol_col_cursor.pos > 0){
+    View_ID view = get_active_view(app, Access_ReadVisible);
+    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+
+    qol_col_cursor = buffer_compute_cursor(app, buffer, seek_line_col(qol_col_cursor.line, qol_col_cursor.col));
+
+    i64 pos = view_get_cursor_pos(app, view);
+    i64 line = get_line_number_from_pos(app, buffer, pos);
+    f32 col_x = view_relative_xy_of_pos(app, view, line, qol_col_cursor.pos).x;
+    f32 cur_x = view_relative_xy_of_pos(app, view, line, pos).x;
+    Face_ID face = get_face_id(app, buffer);
+    f32 space_advance = get_face_metrics(app, face).space_advance;
+
+    i64 N = i64((col_x - cur_x) / space_advance);
+    if (N < 0){ N = 1; }
+    String_Const_u8 spaces = string_const_u8_push(scratch, N);
+    block_fill_u8(spaces.str, N, ' ');
+    write_text(app, spaces);
+  }
+  else{
+    write_space(app);
+  }
+}
+
 CUSTOM_COMMAND_SIG(qol_write_text_input)
 CUSTOM_DOC("[QOL] Inserts whatever text was used to trigger this command.")
 {

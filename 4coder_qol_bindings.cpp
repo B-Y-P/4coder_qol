@@ -133,6 +133,11 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(qol_modal_return,            KeyCode_Return);
   Bind(if_read_only_goto_position_same_panel, KeyCode_Return, KeyCode_Shift);
   Bind(view_jump_list_with_lister,  KeyCode_Period, KeyCode_Control, KeyCode_Shift);
+  Bind(qol_column_toggle,           KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
+  Bind(qol_write_space,             KeyCode_Space);
+  Bind(qol_write_space,             KeyCode_Space, KeyCode_Shift);
+  Bind(qol_char_forward,            KeyCode_Right, KeyCode_Shift);
+  Bind(qol_char_backward,           KeyCode_Left, KeyCode_Shift);
 
   SelectMap(code_id);
   ParentMap(file_id);
