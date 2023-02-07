@@ -14,7 +14,7 @@ set custom_root=%cd%
 set custom_bin=%custom_root%\bin
 cd %location%
 
-if NOT "%Platform%" == "X64" IF NOT "%Platform%" == "x64" (call "%custom_root%\windows_scripts\setup_cl_x64.bat")
+if NOT "%Platform%" == "X64" IF NOT "%Platform%" == "x64" (call "%custom_root%\bin\setup_cl_x64.bat")
 
 set target=%1
 if "%target%" == "" (echo error: no input file & exit)
