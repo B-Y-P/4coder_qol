@@ -25,6 +25,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [11 - comp errors for theme reloads](#c11)
 - [12 - hot reload bindings.4coder](#c12)
 - [13 - reloading helpers](#c13)
+- [14 - file explorer command](#c14)
 
 ---
 
@@ -174,6 +175,12 @@ You're not gonna *believe* what happens next...
 ### 13 - reloading helpers <a name="c13"/>
 If, *hypothetically*, someone had to frequently `git rebase`, 4coder would find a lot of externally modified files\
 Let's expedite the process a bit. We won't give keybinds here, since they're much *heftier* than the average command
+
+</br>
+
+### 14 - file explorer command <a name="c14"/>
+I just wanted a faster way to open explorer in the current directory from 4coder... moving along
+
 
 </br>
 
