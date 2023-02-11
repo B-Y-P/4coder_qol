@@ -92,8 +92,6 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(move_down_to_blank_line_end,      KeyCode_Down, KeyCode_Control);
   Bind(move_left_whitespace_boundary,    KeyCode_Left, KeyCode_Control);
   Bind(move_right_whitespace_boundary,   KeyCode_Right, KeyCode_Control);
-  Bind(move_line_up,                     KeyCode_Up, KeyCode_Alt);
-  Bind(move_line_down,                   KeyCode_Down, KeyCode_Alt);
   Bind(backspace_alpha_numeric_boundary, KeyCode_Backspace, KeyCode_Control);
   Bind(delete_alpha_numeric_boundary,    KeyCode_Delete, KeyCode_Control);
   Bind(snipe_backward_whitespace_or_token_boundary, KeyCode_Backspace, KeyCode_Alt);
@@ -138,6 +136,8 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(qol_write_space,             KeyCode_Space, KeyCode_Shift);
   Bind(qol_char_forward,            KeyCode_Right, KeyCode_Shift);
   Bind(qol_char_backward,           KeyCode_Left, KeyCode_Shift);
+  Bind(qol_move_selection_up,       KeyCode_Up, KeyCode_Alt);
+  Bind(qol_move_selection_down,     KeyCode_Down, KeyCode_Alt);
 
   SelectMap(code_id);
   ParentMap(file_id);

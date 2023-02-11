@@ -302,3 +302,52 @@ CUSTOM_DOC("[QOL] Either goto_jump_at_cursor or writes newline and completes {} 
     }
   }
 }
+
+function void
+qol_move_selection(Application_Links *app, Scan_Direction direction){
+  View_ID view = get_active_view(app, Access_ReadWriteVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+  i64 max_line = buffer_get_line_count(app, buffer)-1;
+  i64 cursor_pos = view_get_cursor_pos(app, view);
+  i64 mark_pos = view_get_mark_pos(app, view);
+  b32 is_up = direction == Scan_Backward;
+
+  Range_i64 range = range_union(get_line_range_from_pos(app, buffer, cursor_pos),
+                                get_line_range_from_pos(app, buffer, mark_pos));
+  i64 line0 = get_line_number_from_pos(app, buffer, range.min);
+  i64 line1 = get_line_number_from_pos(app, buffer, range.max);
+  if ((is_up && line0 <= 1) || (!is_up && line1 >= max_line)){ return; }
+  range.max += 1 + (buffer_get_char(app, buffer, range.max) == '\r');
+
+  i64 target_pos = (is_up ?
+                    get_line_pos_range(app, buffer, line0 - 1).min :
+                    get_line_pos_range(app, buffer, line1 + 1).max + 1);
+
+  Scratch_Block scratch(app);
+  String_Const_u8 string_selection = push_buffer_range(app, scratch, buffer, range);
+  History_Group group = history_group_begin(app, buffer);
+  if (is_up){
+    buffer_replace_range(app, buffer, range, string_u8_empty);
+    buffer_replace_range(app, buffer, Ii64(target_pos), string_selection);
+  }
+  else{
+    buffer_replace_range(app, buffer, Ii64(target_pos), string_selection);
+    buffer_replace_range(app, buffer, range, string_u8_empty);
+  }
+  i64 offset = target_pos - (is_up ? range.min : range.max);
+  view_set_cursor_and_preferred_x(app, view, seek_pos(cursor_pos + offset));
+  view_set_mark(app, view, seek_pos(mark_pos + offset));
+  history_group_end(group);
+}
+
+CUSTOM_COMMAND_SIG(qol_move_selection_up)
+CUSTOM_DOC("[QOL] Move selected lines up 1 line")
+{
+  qol_move_selection(app, Scan_Backward);
+}
+
+CUSTOM_COMMAND_SIG(qol_move_selection_down)
+CUSTOM_DOC("[QOL] Move selected lines down 1 line")
+{
+  qol_move_selection(app, Scan_Forward);
+}
