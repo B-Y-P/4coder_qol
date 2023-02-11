@@ -32,6 +32,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [18 - custom lexer generator](#c18)
 - [19 - custom cpp token kinds](#c19)
 - [20 - enums are parsed and indexed](#c20)
+- [21 - move selected line ranges up/down](#c21)
 
 
 ---
@@ -244,6 +245,11 @@ our parser processes a stream of tokens, and indexes tokens of interest\
 
 For our case, enum values are particularly helpful to index, since they often represent different options\
 So if a function is being passed an enum, jump to definition to switch to a different enum value is invaluable
+
+</br>
+
+### 21 - move selected line ranges up/down <a name="c21"/>
+This ones another quality of life feature which isn't a game changer, but nice to have
 
 </br>
 
