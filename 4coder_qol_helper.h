@@ -13,3 +13,9 @@ printf_message(Application_Links *app, char *format, ...){
   print_message(app, result);
   va_end(args);
 }
+
+function Range_i64
+get_line_range_from_pos(Application_Links *app, Buffer_ID buffer, i64 pos){
+  i64 line = get_line_number_from_pos(app, buffer, pos);
+  return get_line_pos_range(app, buffer, line);
+}
