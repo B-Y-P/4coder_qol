@@ -145,6 +145,30 @@ qol_draw_cursor_mark(Application_Links *app, View_ID view_id, b32 is_active_view
 }
 
 function void
+qol_draw_comment_dividers(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_layout_id, Token_Array *array, Rect_f32 rect){
+  Scratch_Block scratch(app);
+  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
+  i64 first_index = token_index_from_pos(array, visible_range.first);
+  Token_Iterator_Array it = token_iterator_index(buffer, array, first_index);
+  String_Const_u8 match = string_u8_litexpr("//-");
+  for (;;){
+    Temp_Memory_Block temp(scratch);
+    Token *token = token_it_read(&it);
+    if (token->pos >= visible_range.one_past_last){ break; }
+    String_Const_u8 tail = {};
+    if (token_it_check_and_get_lexeme(app, scratch, &it, TokenBaseKind_Comment, &tail)){
+      String_Const_u8 prefix = string_prefix(tail, match.size);
+      if (block_match(prefix.str, match.str, match.size)){
+        f32 y = text_layout_character_on_screen(app, text_layout_id, token->pos).y0;
+        Rect_f32 dividor_line = Rf32(rect.x0, y - 1.f, rect.x1, y);
+        draw_rectangle_fcolor(app, dividor_line, 0.f, fcolor_id(defcolor_comment));
+      }
+    }
+    if (!token_it_inc_non_whitespace(&it)){ break; }
+  }
+}
+
+function void
 qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buffer_ID buffer, Text_Layout_ID text_layout_id, Rect_f32 rect){
   ProfileScope(app, "qol render buffer");
 
@@ -174,6 +198,8 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
       };
       draw_comment_highlights(app, buffer, text_layout_id, &token_array, pairs, ArrayCount(pairs));
     }
+    qol_draw_comment_dividers(app, buffer, text_layout_id, &token_array, rect);
+
     Scratch_Block scratch(app);
     ARGB_Color cl_type   = fcolor_resolve(fcolor_id(defcolor_type));
     ARGB_Color cl_func   = fcolor_resolve(fcolor_id(defcolor_function));
