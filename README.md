@@ -34,6 +34,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [20 - enums are parsed and indexed](#c20)
 - [21 - move selected line ranges up/down](#c21)
 - [22 - example kill-rectangle](#c22)
+- [23 - draw comment divider lines](#c23)
 
 ---
 
@@ -266,6 +267,10 @@ Finally, if take a closer look at the control flow implications of `qol_kill_rec
 We'll notice that it's doing a spin-loop on user input, but when we ran it, the other views still rendered and updated just fine\
 This is because `get_next_input` acts as a coroutine, allowing us the illusion of writing synchronous code without fully blocking
 
+</br>
+
+### 23 - draw comment divider lines <a name="c23"/>
+Just a nice and simple change to help visualy 'slice' the code into sections without having to spam `///`'s
 
 </br>
 
