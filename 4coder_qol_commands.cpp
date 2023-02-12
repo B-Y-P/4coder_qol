@@ -351,3 +351,59 @@ CUSTOM_DOC("[QOL] Move selected lines down 1 line")
 {
   qol_move_selection(app, Scan_Forward);
 }
+
+function void
+qol_render_kill_rect(Application_Links *app, Frame_Info frame_info, View_ID view){
+  Render_Caller_Function *custom_render = (Render_Caller_Function*)get_custom_hook(app, HookID_RenderCaller);
+  custom_render(app, frame_info, view);
+
+  Rect_f32 view_rect = view_get_screen_rect(app, view);
+  Rect_f32 region = view_get_buffer_region(app, view);
+
+  Face_ID face_id = get_face_id(app, 0);
+  Face_Metrics metrics = get_face_metrics(app, face_id);
+  f32 line_height = metrics.line_height;
+
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  Buffer_Scroll scroll = view_get_buffer_scroll(app, view);
+  Buffer_Point buffer_point = scroll.position;
+  Text_Layout_ID text_layout_id = text_layout_create(app, buffer, region, buffer_point);
+  Range_i64 range = get_view_range(app, view);
+  Rect_f32 r0 = text_layout_character_on_screen(app, text_layout_id, range.min);
+  Rect_f32 r1 = text_layout_character_on_screen(app, text_layout_id, range.max);
+  Rect_f32 rect = rect_union(r0, r1);
+  FColor f_color = fcolor_id(defcolor_highlight);
+
+  String_Const_u8 prompt = string_u8_litexpr("Kill Rectangle: Yes: (Y) No: (N)");
+  Vec2_f32 p = rect.p0 - V2f32(0, line_height);
+  f32 advance = get_string_advance(app, face_id, prompt);
+  Rect_f32 prompt_rect = Rf32(p - V2f32(10.f, 10.f), p + V2f32(advance + 10.f, line_height));
+  draw_rectangle(app, prompt_rect, 5.f, 0xDD000000);
+  draw_string(app, face_id, prompt, p, 0xFFFFFFFF);
+  draw_rectangle_fcolor(app, rect, 5.f, fcolor_change_alpha(f_color, 0.5f));
+  text_layout_free(app, text_layout_id);
+}
+
+CUSTOM_COMMAND_SIG(qol_kill_rectangle)
+CUSTOM_DOC("[QOL] Prompt deletion of text in the cursor/mark rectangle")
+{
+  View_ID view = get_active_view(app, Access_Always);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+  if (buffer == 0){
+    return qol_block_apply(app, view, view_get_buffer(app, view, Access_Always), get_view_range(app, view), qol_range_fade);
+  }
+
+  View_Context ctx = view_current_context(app, view);
+  ctx.render_caller = qol_render_kill_rect;
+  ctx.hides_buffer = false;
+  View_Context_Block ctx_block(app, view, &ctx);
+
+  for (;;){
+    User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
+    if (in.abort){ break; }
+    else if (in.event.kind == InputEventKind_CustomFunction){ return in.event.custom_func(app); }
+    else if (match_core_code(&in, CoreCode_TryExit)){ return implicit_map_function(app, 0, 0, &in.event).command(app); }
+    else if (match_key_code(&in, KeyCode_Y)){ return qol_block_delete(app, view, buffer, get_view_range(app, view)); }
+    else if (match_key_code(&in, KeyCode_N)){ return; }
+  }
+}

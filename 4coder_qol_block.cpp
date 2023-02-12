@@ -1,4 +1,6 @@
 
+typedef void QOL_Range_Func(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range);
+
 function Rect_f32
 qol_get_rel_block_rect(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range, i64 line){
   Vec2_f32 p0 = view_relative_xy_of_pos(app, view, line, range.min);
@@ -95,10 +97,25 @@ qol_block_iter_init(Application_Links *app, View_ID view, Range_i64 range){
 }
 
 function void
+qol_block_apply(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 block, QOL_Range_Func *func){
+  for (Block_Iter iter = qol_block_iter_init(app, view, block); qol_block_iter_next(&iter);){
+    func(app, view, buffer, iter.range);
+  }
+}
+
+function void
+qol_range_delete(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range){
+  buffer_replace_range(app, buffer, range, string_u8_empty);
+}
+
+function void
+qol_range_fade(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range){
+  buffer_post_fade(app, buffer, 0.667f, range, fcolor_resolve(fcolor_id(defcolor_pop2)));
+}
+
+function void
 qol_block_delete(Application_Links *app, View_ID view, Buffer_ID buffer, Range_i64 range){
   History_Group group = history_group_begin(app, buffer);
-  for (Block_Iter iter = qol_block_iter_init(app, view, range); qol_block_iter_next(&iter);){
-    buffer_replace_range(app, iter.buffer, iter.range, string_u8_empty);
-  }
+  qol_block_apply(app, view, buffer, range, qol_range_delete);
   history_group_end(group);
 }

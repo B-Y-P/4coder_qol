@@ -38,6 +38,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [23 - enums are parsed and indexed              ](#c23)
 - [24 - globals are parsed and indexed            ](#c24)
 - [25 - move selected line ranges up/down         ](#c25)
+- [26 - example kill-rectangle                    ](#c26)
 
 ---
 
@@ -277,6 +278,21 @@ If at any point, we fail, we reset our token-stream position and it's no harm, n
 
 ### 25 - move selected line ranges up/down <a name="c25"/>
 This ones another quality of life feature which isn't a game changer, but nice to have
+
+</br>
+
+### 26 - example kill-rectangle <a name="c26"/>
+The thing about [`qol_block_delete`](#c20) is that it's unclear exactly what's going to happen when you call it\
+So let's provide a visual indication, and prompt the user to decide Yes or No
+
+This moreso serves as a minimal but non-trivial example of what you can do with 4coder's View context\
+We can see that we can override the View's render function, but internally we can still call whatever render hook was\
+This let's us draw overtop of our rendered Views without adding code specifically to *our* main render_caller\
+This means that someone could add their own hooks, and call our function and the behavior would be consistent
+
+Finally, if take a closer look at the control flow implications of `qol_kill_rectangle`\
+We'll notice that it's doing a spin-loop on user input, but when we ran it, the other views still rendered and updated just fine\
+This is because `get_next_input` acts as a coroutine, allowing us the illusion of writing synchronous code without fully blocking
 
 </br>
 
