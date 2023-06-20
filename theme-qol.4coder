@@ -16,8 +16,8 @@ defcolor_at_highlight               =  0xFFCDAA7D;
 
 defcolor_text_default               =  0xFFEFEFEF;
 defcolor_comment                    =  0xFF616E88;
-defcolor_comment_pop                = {0xFFB240F0, 0xFFB594e3};       // NOTE, TODO
 defcolor_keyword                    =  0xFFAEF1FC;
+defcolor_comment_pop                = {0xFFB240F0, 0xFFB594e3, 0xFFFF0000};  // NOTE, TODO, @annotate
 defcolor_str_constant               =  0xFFA3BE8C;
 defcolor_char_constant              =  0xFFDBAB5B;
 defcolor_include                    =  defcolor_str_constant;
