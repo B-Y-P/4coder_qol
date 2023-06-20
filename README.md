@@ -42,6 +42,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [27 - draw comment divider lines                ](#c27)
 - [28 - divider movements                         ](#c28)
 - [29 - jump stack                                ](#c29)
+- [30 - draw hovered token underlines             ](#c30)
 
 ---
 
@@ -319,6 +320,12 @@ We'd like to be able to jump in both views independent of one another\
 To accomplish this, we store these per view, rather than globally\
 By declaring `CUSTOM_ID(attachment, ...)` and calling `scope_attachment()` with the view's scope\
 its allocation and deallocation is tied to the view, and cleared to zero on first call
+
+</br>
+
+### 30 - draw hovered token underlines <a name="c30"/>
+Helps provide a more passive visual for "where else is this being used?"\
+Without having to forcibly substring search and fill your view with highlights
 
 </br>
 
