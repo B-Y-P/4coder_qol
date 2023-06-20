@@ -187,7 +187,7 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   // NOTE(allen): Token colorizing
   Token_Array token_array = get_token_array_from_buffer(app, buffer);
   if (token_array.tokens != 0){
-    qol_draw_cpp_token_colors(app, text_layout_id, &token_array);
+    qol_draw_cpp_token_colors(app, view_id, buffer, text_layout_id, &token_array);
 
     // NOTE(allen): Scan for TODOs and NOTEs
     b32 use_comment_keyword = def_get_config_b32(vars_save_string_lit("use_comment_keyword"));
@@ -199,36 +199,6 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
       draw_comment_highlights(app, buffer, text_layout_id, &token_array, pairs, ArrayCount(pairs));
     }
     qol_draw_comment_dividers(app, buffer, text_layout_id, &token_array, rect);
-
-    Scratch_Block scratch(app);
-    ARGB_Color cl_type   = fcolor_resolve(fcolor_id(defcolor_type));
-    ARGB_Color cl_func   = fcolor_resolve(fcolor_id(defcolor_function));
-    ARGB_Color cl_macro  = fcolor_resolve(fcolor_id(defcolor_macro));
-    ARGB_Color cl_global = fcolor_resolve(fcolor_id(defcolor_global));
-    ARGB_Color cl_enum   = fcolor_resolve(fcolor_id(defcolor_enum));
-
-    Token_Iterator_Array it = token_iterator_pos(0, &token_array, visible_range.first);
-    for (;;){
-      Token *token = token_it_read(&it);
-      Range_i64 tok_range = Ii64(token);
-      if (token->pos > visible_range.max){ break; }
-      String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, token);
-      Code_Index_Note *note = code_index_note_from_string(lexeme);
-      if (!token_it_inc_non_whitespace(&it)){ break; }
-      if (note == 0){ continue; }
-      switch(note->note_kind){
-        case CodeIndexNote_Type:
-        paint_text_color(app, text_layout_id, tok_range, cl_type); break;
-        case CodeIndexNote_Function:
-        paint_text_color(app, text_layout_id, tok_range, cl_func); break;
-        case CodeIndexNote_Macro:
-        paint_text_color(app, text_layout_id, tok_range, cl_macro); break;
-        case CodeIndexNote_Global:
-        paint_text_color(app, text_layout_id, tok_range, cl_global); break;
-        case CodeIndexNote_Enum:
-        paint_text_color(app, text_layout_id, tok_range, cl_enum); break;
-      }
-    }
   }
   else{
     paint_text_color_fcolor(app, text_layout_id, visible_range, fcolor_id(defcolor_text_default));
