@@ -156,6 +156,16 @@ character_predicate_not(Character_Predicate *a){
   return(p);
 }
 
+function Character_Predicate
+character_predicate_from_chars(String_Const_u8 chars){
+  Character_Predicate predicate = {};
+  for (u64 i = 0; i < chars.size; i += 1){
+    Character_Predicate p = character_predicate_from_character(chars.str[i]);
+    predicate = character_predicate_or(&predicate, &p);
+  }
+  return(predicate);
+}
+
 function i64
 buffer_seek_character_class_change__inner(Application_Links *app, Buffer_ID buffer, Character_Predicate *positive, Character_Predicate *negative, Scan_Direction direction, i64 start_pos){
   i64 pos = start_pos;

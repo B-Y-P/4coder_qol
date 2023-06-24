@@ -140,7 +140,7 @@ CUSTOM_DOC("Deletes the text in the range between the cursor and the mark.")
   buffer_replace_range(app, buffer, range, string_u8_empty);
 }
 
-function  void
+function void
 current_view_boundary_delete(Application_Links *app, Scan_Direction direction, Boundary_Function_List funcs){
   View_ID view = get_active_view(app, Access_ReadWriteVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
@@ -148,7 +148,9 @@ current_view_boundary_delete(Application_Links *app, Scan_Direction direction, B
   range.first = view_get_cursor_pos(app, view);
   range.one_past_last = scan(app, funcs, buffer, direction, range.first);
   range = rectify(range);
-  buffer_replace_range(app, buffer, range, string_u8_empty);
+  if (range_size(range) > 0){
+    buffer_replace_range(app, buffer, range, string_u8_empty);
+  }
 }
 
 CUSTOM_COMMAND_SIG(backspace_alpha_numeric_boundary)

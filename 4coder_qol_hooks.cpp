@@ -31,10 +31,13 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     clear_all_layouts(app);
   }
 
-
   Face_Description desc = get_global_face_description(app);
   desc.parameters.pt_size -= 4;
   qol_small_face = try_create_new_face(app, &desc);
+
+  String_Const_u8 non_word_chars = string_u8_litexpr(" \t\n/\\()\"':,.;<>~!@#$%^&*|+=[]{}`?-_");
+  character_predicate_non_word = character_predicate_from_chars(non_word_chars);
+  character_predicate_word     = character_predicate_not(&character_predicate_non_word);
 
   Scratch_Block scratch(app);
   set_active_color(get_color_table_by_name(def_get_config_string(scratch, vars_save_string_lit("default_theme_name"))));

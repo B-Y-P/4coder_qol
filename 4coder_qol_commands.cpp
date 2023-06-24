@@ -192,6 +192,71 @@ CUSTOM_DOC("[QOL] Opens file explorer in cwd")
 }
 
 function i64
+qol_boundary_ctrl_motion(Application_Links *app, Buffer_ID buffer, Side side, Scan_Direction dir, i64 pos){
+  i64 size = buffer_get_size(app, buffer);
+  i64 p0 = pos;
+
+  String_Match m0 = buffer_seek_character_class(app, buffer, &character_predicate_non_whitespace, dir, pos);
+  if (buffer == m0.buffer){
+    pos = (dir == Scan_Forward ? m0.range.max-1 : m0.range.min);
+  }else{
+    return (dir == Scan_Forward ? size : 0);
+  }
+
+  u8 ch = buffer_get_char(app, buffer, pos);
+  bool is_non_word = ch == 0 || character_predicate_check_character(character_predicate_non_word, ch);
+
+  Character_Predicate pred = (is_non_word ? character_predicate_word : character_predicate_non_word);
+  pred = character_predicate_or(&character_predicate_whitespace, &pred);
+
+  String_Match m1 = buffer_seek_character_class(app, buffer, &pred, dir, pos);
+  if (buffer == m1.buffer){
+    i64 p2 = (dir == Scan_Forward ? m1.range.max : m1.range.min) - dir;
+    pos = (p0 == p2 ? 0 : p2);
+  }else{
+    return (dir == Scan_Forward ? size : 0);
+  }
+  return pos;
+}
+
+function void
+current_view_boundary_move(Application_Links *app, Scan_Direction direction, Boundary_Function_List funcs){
+  View_ID view = get_active_view(app, Access_ReadVisible);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  i64 pos = view_get_cursor_pos(app, view);
+  pos = scan(app, funcs, buffer, direction, pos);
+  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
+}
+
+CUSTOM_COMMAND_SIG(qol_ctrl_delete)
+CUSTOM_DOC("[QOL] Standard ctrl-delete")
+{
+  Scratch_Block scratch(app);
+  current_view_boundary_delete(app, Scan_Forward, push_boundary_list(scratch, qol_boundary_ctrl_motion));
+}
+
+CUSTOM_COMMAND_SIG(qol_ctrl_backspace)
+CUSTOM_DOC("[QOL] Standard ctrl-backspace")
+{
+  Scratch_Block scratch(app);
+  current_view_boundary_delete(app, Scan_Backward, push_boundary_list(scratch, qol_boundary_ctrl_motion));
+}
+
+CUSTOM_COMMAND_SIG(qol_ctrl_forwards)
+CUSTOM_DOC("[QOL] Standard ctrl-right")
+{
+  Scratch_Block scratch(app);
+  current_view_boundary_move(app, Scan_Forward, push_boundary_list(scratch, qol_boundary_ctrl_motion));
+}
+
+CUSTOM_COMMAND_SIG(qol_ctrl_backwards)
+CUSTOM_DOC("[QOL] Standard ctrl-left")
+{
+  Scratch_Block scratch(app);
+  current_view_boundary_move(app, Scan_Backward, push_boundary_list(scratch, qol_boundary_ctrl_motion));
+}
+
+function i64
 qol_seek_char(Application_Links *app, Buffer_ID buffer, Scan_Direction direction, i64 start_pos, u8 target_char){
   Scratch_Block scratch(app);
   i64 line = get_line_number_from_pos(app, buffer, start_pos);
