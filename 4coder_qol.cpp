@@ -1,4 +1,10 @@
 
+#include "4coder_default_include.h"
+
+//#define SNIPPET_EXPANSION "path/to/snippet.inc"
+
+//#define AUTO_CENTER_AFTER_JUMPS true
+
 #include "4coder_default_include.cpp"
 
 #if !defined(META_PASS)
