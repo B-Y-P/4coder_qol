@@ -2,6 +2,10 @@
  * Lister base
  */
 
+#if !defined(run_lister)
+#define run_lister default_run_lister
+#endif
+
 // TOP
 
 function Vec2_f32
@@ -507,7 +511,7 @@ lister_user_data_at_p(Application_Links *app, View_ID view, Lister *lister, Vec2
 }
 
 function Lister_Result
-run_lister(Application_Links *app, Lister *lister){
+default_run_lister(Application_Links *app, Lister *lister){
   lister->filter_restore_point = begin_temp(lister->arena);
   lister_update_filtered_list(app, lister);
 
