@@ -438,6 +438,7 @@ api(custom)
 struct Marker{
   i64 pos;
   b32 lean_right;
+  i32 line;   // NOTE(BYP): This is padding as far as the core is concerned
 };
 
 api(custom)
