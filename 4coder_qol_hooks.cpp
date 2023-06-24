@@ -32,6 +32,10 @@ CUSTOM_DOC("QOL command for responding to a startup event")
 		clear_all_layouts(app);
 	}
 
+	Face_Description desc = get_global_face_description(app);
+	desc.parameters.pt_size -= 4;
+	qol_small_face = try_create_new_face(app, &desc);
+
 	qol_cur_colors = qol_color_table_init(app);
 	qol_nxt_colors = qol_color_table_init(app);
 	qol_color_table_copy(qol_cur_colors, active_color_table);
