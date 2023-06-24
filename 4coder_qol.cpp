@@ -6,6 +6,9 @@
 //#define AUTO_CENTER_AFTER_JUMPS true
 
 #include "4coder_qol_token.h"
+#include "4coder_qol_lister.h"
+#define run_lister qol_run_lister
+
 #include "4coder_default_include.cpp"
 
 #include "4coder_qol_helper.h"
@@ -43,6 +46,8 @@ function void qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 fil
 
 #include "4coder_qol_commands.cpp"
 #include "4coder_qol_draw.cpp"
+#include "4coder_qol_lister.cpp"
+
 #include "4coder_qol_bindings.cpp"
 #include "4coder_qol_hooks.cpp"
 
