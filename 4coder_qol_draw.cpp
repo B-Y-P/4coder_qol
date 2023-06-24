@@ -202,6 +202,108 @@ qol_draw_comments(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_
 }
 
 function void
+qol_draw_function_tooltip_inner(Application_Links *app, Arena *arena, Buffer_ID buffer, Code_Index_Note *note, Range_f32 x_range, i64 depth, Range_i64 range){
+	Range_i64 def_range = note->pos;
+	find_nest_side(app, note->file->buffer, def_range.end+1, FindNest_Paren|FindNest_Balanced|FindNest_EndOfToken, Scan_Forward, NestDelim_Close, &def_range.end);
+
+	String_Const_u8 sig = push_buffer_range(app, arena, note->file->buffer, def_range);
+	sig = string_condense_whitespace(arena, sig);
+
+	Face_Metrics metrics = get_face_metrics(app, qol_small_face);
+	f32 wid = 2.f;
+	f32 pad = 2.f;
+	Rect_f32 rect = {};
+	rect.p0 = qol_cur_cursor_pos + V2f32(0, 2.f + depth*(metrics.line_height + pad + 2.f*wid));
+	rect.p1 = rect.p0 + V2f32(sig.size*metrics.normal_advance, wid + metrics.line_height);
+	f32 x_offset = ((rect.x1 > x_range.max)*(rect.x1 - x_range.max) -
+					(rect.x0 < x_range.min)*(rect.x0 - x_range.max));
+	rect.x0 -= x_offset;
+	rect.x1 -= x_offset;
+	draw_rectangle_fcolor(app, rect, 3.f, fcolor_id(defcolor_back));
+	rect.x0 -= pad;
+	rect.x1 += pad;
+	draw_rectangle_outline_fcolor(app, rect, 3.f, wid, fcolor_id(defcolor_ghost_character));
+	draw_string(app, qol_small_face, sig, rect.p0 + (pad + wid)*V2f32(1,1), fcolor_id(defcolor_ghost_character));
+}
+
+function void
+qol_draw_function_tooltip(Application_Links *app, Buffer_ID buffer, Range_f32 x_range, i64 pos){
+	Token_Array tokens = get_token_array_from_buffer(app, buffer);
+	if (tokens.tokens == 0){ return; }
+	Token_Iterator_Array it = token_iterator_pos(0, &tokens, pos);
+	Token *token = token_it_read(&it);
+
+	if (token->kind == TokenBaseKind_ParentheticalOpen){
+		pos = token->pos + token->size;
+	} else if (token_it_dec_all(&it)){
+		token = token_it_read(&it);
+		if (token->kind == TokenBaseKind_ParentheticalClose && pos == token->pos + token->size){
+			pos = token->pos;
+		}
+	}
+
+	i64 count = 0;
+	Scratch_Block scratch(app);
+	Range_i64_Array ranges = get_enclosure_ranges(app, scratch, buffer, pos, FindNest_Paren);
+
+	code_index_lock();
+	for (i64 i=0; i < ranges.count; i += 1){
+		Scratch_Block temp(app, scratch);
+		Range_i64 range = ranges.ranges[i];
+		i64 f_pos = range.min-1;
+		Token_Iterator_Array cur_it = token_iterator_pos(0, &tokens, f_pos);
+		token = token_it_read(&cur_it);
+
+		if (token->kind == TokenBaseKind_Identifier){
+			String_Const_u8 lexeme = push_token_lexeme(app, temp, buffer, token);
+			Code_Index_Note *note = code_index_note_from_string(lexeme);
+			if (note == NULL){ continue; }
+			if (note->note_kind == CodeIndexNote_Function ||
+				note->note_kind == CodeIndexNote_Macro)
+			{
+				qol_draw_function_tooltip_inner(app, temp, buffer, note, x_range, ++count, range);
+			}
+		}
+	}
+	code_index_unlock();
+}
+
+function void
+qol_draw_compile_errors(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_layout_id, Buffer_ID jump_buffer){
+	if (jump_buffer == 0){ return; }
+
+	Scratch_Block scratch(app);
+	Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
+	FColor cl_error = fcolor_blend(fcolor_id(defcolor_highlight_junk), 0.6f, fcolor_id(defcolor_text_default));
+
+	Managed_Scope scopes[2];
+	scopes[0] = buffer_get_managed_scope(app, jump_buffer);
+	scopes[1] = buffer_get_managed_scope(app, buffer);
+	Managed_Scope comp_scope = get_managed_scope_with_multiple_dependencies(app, scopes, ArrayCount(scopes));
+	Managed_Object *markers_object = scope_attachment(app, comp_scope, sticky_jump_marker_handle, Managed_Object);
+
+	i32 count = managed_object_get_item_count(app, *markers_object);
+	Marker *markers = push_array(scratch, Marker, count);
+	managed_object_load_data(app, *markers_object, 0, count, markers);
+	for (i32 i = 0; i < count; i += 1){
+		i64 line_number = get_line_number_from_pos(app, buffer, markers[i].pos);
+		Range_i64 line_range = get_line_pos_range(app, buffer, line_number);
+		if (!range_overlap(visible_range, line_range)){ continue; }
+
+		String_Const_u8 comp_line_string = push_buffer_line(app, scratch, jump_buffer, markers[i].line);
+		Parsed_Jump jump = parse_jump_location(comp_line_string);
+		if (!jump.success){ continue; }
+
+		i64 end_pos = get_line_end_pos(app, buffer, line_number)-1;
+		Rect_f32 end_rect = text_layout_character_on_screen(app, text_layout_id, end_pos);
+		Vec2_f32 p0 = V2f32(end_rect.x1, end_rect.y0 + 4.f);
+		String_Const_u8 error_string = string_skip(comp_line_string, jump.colon_position + 2);
+		draw_line_highlight(app, text_layout_id, line_number, fcolor_id(defcolor_highlight_junk));
+		draw_string(app, qol_small_face, error_string, p0, cl_error);
+	}
+}
+
+function void
 qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buffer_ID buffer, Text_Layout_ID text_layout_id, Rect_f32 rect){
 	ProfileScope(app, "qol render buffer");
 
@@ -274,8 +376,7 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
 		String_Const_u8 name = string_u8_litexpr("*compilation*");
 		Buffer_ID compilation_buffer = get_buffer_by_name(app, name, Access_Always);
 		if (use_error_highlight){
-			draw_jump_highlights(app, buffer, text_layout_id, compilation_buffer,
-								 fcolor_id(defcolor_highlight_junk));
+			qol_draw_compile_errors(app, buffer, text_layout_id, compilation_buffer);
 		}
 
 		// NOTE(allen): Search highlight
