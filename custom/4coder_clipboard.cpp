@@ -11,7 +11,6 @@ CUSTOM_DOC("In response to a new clipboard contents events, saves the new clip o
   if (in.event.kind == InputEventKind_Core &&
       in.event.core.code == CoreCode_NewClipboardContents){
     clipboard_post_internal_only(0, in.event.core.string);
-    clipboard_post_internal_only(0, in.event.core.string);
   }
 }
 
