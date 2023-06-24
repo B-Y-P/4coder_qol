@@ -82,6 +82,63 @@ qol_draw_scopes(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Lay
     draw_rectangle_outline_fcolor(app, scope_rect, 5.f, 2.f, color);
   }
   draw_set_clip(app, prev_clip);
+
+  Token_Array tokens = get_token_array_from_buffer(app, buffer);
+  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
+  for (i64 i=0 ; i < ranges.count; i += 1){
+    Range_i64 range = ranges.ranges[ranges.count-1-i];
+    i64 line0 = get_line_number_from_pos(app, buffer, range.min);
+    i64 line1 = get_line_number_from_pos(app, buffer, range.max);
+    if (line0 == line1 || range.max >= visible_range.max){ continue; }
+
+    Token *start_token = 0;
+    Token_Iterator_Array it = token_iterator_pos(0, &tokens, range.min-1);
+    i64 paren_level = 0;
+    for (;;){
+      Token *token = token_it_read(&it);
+      if (token == 0){ break; }
+
+      paren_level += (token->kind == TokenBaseKind_ParentheticalClose);
+      paren_level -= (token->kind == TokenBaseKind_ParentheticalOpen);
+
+      if (paren_level == 0){
+        if (token->kind == TokenBaseKind_ScopeClose ||
+            (token->kind == TokenBaseKind_StatementClose && token->sub_kind != TokenCppKind_Colon))
+        {
+          break;
+        }
+        else if (token->kind == TokenBaseKind_Identifier ||
+                 token->kind == TokenBaseKind_Keyword    ||
+                 token->kind == TokenBaseKind_Comment    ||
+                 token->kind == qol_TokenKind_Control)
+        {
+          start_token = token;
+          break;
+        }
+      }
+      if (!token_it_dec_non_whitespace(&it)){ break; }
+    }
+
+    if (start_token){
+      i64 line = get_line_number_from_pos(app, buffer, start_token->pos);
+      String_Const_u8 text = push_buffer_line(app, scratch, buffer, line);
+
+      i64 ws_count = 0;
+      for (u64 j = 0; j < text.size; j += 1){
+        if (text.str[j] > 32){ break; }
+        ws_count++;
+      }
+      text.str  += ws_count;
+      text.size -= ws_count;
+      text.size -= (text.str[text.size-1] == '\r');
+
+      i64 end_pos = get_line_end_pos(app, buffer, line1)-1;
+      Rect_f32 end_rect = text_layout_character_on_screen(app, text_layout_id, end_pos);
+      Vec2_f32 p0 = V2f32(end_rect.x1 + 3.f, end_rect.y0 + 3.f);
+
+      draw_string(app, qol_small_face, text, p0, fcolor_id(defcolor_ghost_character));
+    }
+  }
 }
 
 function void

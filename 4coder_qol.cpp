@@ -34,6 +34,8 @@ global Vec2_f32 qol_nxt_cursor_pos;
 global Color_Table qol_cur_colors;
 global Color_Table qol_nxt_colors;
 
+global Face_ID qol_small_face;
+
 #include "4coder_qol_colors.cpp"
 #include "4coder_qol_token.cpp"
 

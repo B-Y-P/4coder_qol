@@ -44,6 +44,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [29 - jump stack                                ](#c29)
 - [30 - draw hovered token underlines             ](#c30)
 - [31 - paint @annotations in comments            ](#c31)
+- [32 - scope end annotations                     ](#c32)
 
 ---
 
@@ -332,6 +333,16 @@ Without having to forcibly substring search and fill your view with highlights
 
 ### 31 - paint @annotations in comments <a name="c31"/>
 We have code to iterate over comment tokens, so it's easy enough add a scan for '@'
+
+</br>
+
+### 32 - scope end annotations <a name="c32"/>
+I mentioned that [scopes off screen](#c20) posed a challenge to implementing features,\
+but they're also problematic to come across as a user
+
+If you don't know *what* scope you're currently at the end of, you'll have to double check\
+And to double check, you have to go all the way up, just to go right back down\
+Let's just have the editor *tell* you
 
 </br>
 
