@@ -95,10 +95,10 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(move_down_to_blank_line_end,      KeyCode_Down, KeyCode_Control);
   Bind(qol_find_divider_up,              KeyCode_Up, KeyCode_Control, KeyCode_Shift);
   Bind(qol_find_divider_down,            KeyCode_Down, KeyCode_Control, KeyCode_Shift);
-  Bind(move_left_whitespace_boundary,    KeyCode_Left, KeyCode_Control);
-  Bind(move_right_whitespace_boundary,   KeyCode_Right, KeyCode_Control);
-  Bind(backspace_alpha_numeric_boundary, KeyCode_Backspace, KeyCode_Control);
-  Bind(delete_alpha_numeric_boundary,    KeyCode_Delete, KeyCode_Control);
+  Bind(qol_ctrl_forwards,          KeyCode_Right, KeyCode_Control);
+  Bind(qol_ctrl_backwards,         KeyCode_Left, KeyCode_Control);
+  Bind(qol_ctrl_delete,            KeyCode_Delete, KeyCode_Control);
+  Bind(qol_ctrl_backspace,         KeyCode_Backspace, KeyCode_Control);
   Bind(snipe_backward_whitespace_or_token_boundary, KeyCode_Backspace, KeyCode_Alt);
   Bind(snipe_forward_whitespace_or_token_boundary,  KeyCode_Delete, KeyCode_Alt);
   Bind(set_mark,                    KeyCode_Space, KeyCode_Control);
@@ -146,8 +146,6 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
 
   SelectMap(code_id);
   ParentMap(file_id);
-  Bind(move_left_alpha_numeric_boundary,           KeyCode_Left, KeyCode_Control);
-  Bind(move_right_alpha_numeric_boundary,          KeyCode_Right, KeyCode_Control);
   Bind(move_left_alpha_numeric_or_camel_boundary,  KeyCode_Left, KeyCode_Alt);
   Bind(move_right_alpha_numeric_or_camel_boundary, KeyCode_Right, KeyCode_Alt);
   Bind(comment_line_toggle,        KeyCode_Semicolon, KeyCode_Control);
