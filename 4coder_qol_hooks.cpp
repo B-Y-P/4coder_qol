@@ -31,6 +31,11 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     clear_all_layouts(app);
   }
 
+
+  Face_Description desc = get_global_face_description(app);
+  desc.parameters.pt_size -= 4;
+  qol_small_face = try_create_new_face(app, &desc);
+
   Scratch_Block scratch(app);
   set_active_color(get_color_table_by_name(def_get_config_string(scratch, vars_save_string_lit("default_theme_name"))));
   qol_cur_colors = qol_color_table_init(app);
