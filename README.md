@@ -41,6 +41,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [27 - scope end annotations](#c27)
 - [28 - compiler error annotations](#c28)
 - [29 - function peek tooltip](#c29)
+- [30 - ctrl-movements](#c30)
 
 ---
 
@@ -321,6 +322,12 @@ we can avoid a lot of redundant work when drawing each individual error message
 Same idea as before where instead you're currently typing function parameters\
 You'd rather not context switch by jumping to definition, double checking the type, and jumping back\
 So let's just show you the definition, as you type
+
+</br>
+
+### 30 - ctrl-movements <a name="c30"/>
+Default behavior for ctrl-backspace and similar ctrl-movements is *slightly* different from other text editors
+
 
 </br>
 

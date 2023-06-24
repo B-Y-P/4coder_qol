@@ -32,6 +32,9 @@ global Color_Table qol_nxt_colors;
 
 global Face_ID qol_small_face;
 
+global Character_Predicate character_predicate_word = {};
+global Character_Predicate character_predicate_non_word = {};
+
 #include "4coder_qol_colors.cpp"
 #include "4coder_qol_token.cpp"
 

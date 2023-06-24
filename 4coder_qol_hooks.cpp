@@ -36,6 +36,15 @@ CUSTOM_DOC("QOL command for responding to a startup event")
 	desc.parameters.pt_size -= 4;
 	qol_small_face = try_create_new_face(app, &desc);
 
+	{
+		String_Const_u8 non_word_chars = string_u8_litexpr(" \t\n/\\()\"':,.;<>~!@#$%^&*|+=[]{}`?-");
+		for (u64 i = 0; i < non_word_chars.size; i += 1){
+			Character_Predicate pred = character_predicate_from_character(non_word_chars.str[i]);
+			character_predicate_non_word = character_predicate_or(&pred, &character_predicate_non_word);
+		}
+		character_predicate_word = character_predicate_not(&character_predicate_non_word);
+	}
+
 	qol_cur_colors = qol_color_table_init(app);
 	qol_nxt_colors = qol_color_table_init(app);
 	qol_color_table_copy(qol_cur_colors, active_color_table);
