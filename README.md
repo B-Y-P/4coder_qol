@@ -40,6 +40,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [26 - paint @annotations in comments](#c26)
 - [27 - scope end annotations](#c27)
 - [28 - compiler error annotations](#c28)
+- [29 - function peek tooltip](#c29)
 
 ---
 
@@ -313,6 +314,13 @@ so we can minimize the amount of neck-craning it takes when moving between code 
 There's some interesting behavior with how 4coder stores per-buffer pos and line numbers of errors\
 By making a bit of an intrusive change which relies on reclaiming some otherwise unused padding,\
 we can avoid a lot of redundant work when drawing each individual error message
+
+</br>
+
+### 29 - function peek tooltip <a name="c29"/>
+Same idea as before where instead you're currently typing function parameters\
+You'd rather not context switch by jumping to definition, double checking the type, and jumping back\
+So let's just show you the definition, as you type
 
 </br>
 

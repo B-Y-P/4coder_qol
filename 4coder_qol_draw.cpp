@@ -431,6 +431,10 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
 	// NOTE(allen): put the actual text on the actual screen
 	draw_text_layout_default(app, text_layout_id);
 
+	if (rect_contains_point(rect, qol_cur_cursor_pos)){
+		qol_draw_function_tooltip(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
+	}
+
 	draw_set_clip(app, prev_clip);
 }
 
