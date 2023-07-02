@@ -43,6 +43,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [29 - function peek tooltip](#c29)
 - [30 - ctrl-movements](#c30)
 - [31 - lister setup](#c31)
+- [32 - lister ctrl-backspace](#c32)
 
 ---
 
@@ -337,6 +338,17 @@ Well, here's the final exam
 
 Most of this is just copy-pasted boilerplace, except for the trick of `run_lister` becoming definable at the include site\
 This lets me rewrite the base lister behavior, and have it apply to all the previous listers
+
+</br>
+
+### 32 - lister ctrl-backspace <a name="c32"/>
+We've got some perfectly good `ctrl-backspace` code lying around, and a fresh new lister base\
+So why not embue the lister with the power to ctrl-backspace?
+
+Since the `ctrl-backspace` works on Buffers and not strings, we have a choice to make\
+We could attach our lister to it's own Buffer and keep it in sync with its query string (far more effort than it demands)\
+Or, use a temp Buffer to wrap the `ctrl-backspace` behavior, and give an API for String -> String method :)
+
 
 </br>
 
