@@ -20,6 +20,12 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     if (auto_load){
       load_project(app);
     }
+
+    qol_temp_buffer = create_buffer(app, string_u8_litexpr("*qol_temp*"),
+                                    BufferCreate_Background | BufferCreate_AlwaysNew | BufferCreate_NeverAttachToFile);
+    buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unimportant, true);
+    buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unkillable, true);
+    buffer_set_setting(app, qol_temp_buffer, BufferSetting_ReadOnly, false);
   }
 
   {
