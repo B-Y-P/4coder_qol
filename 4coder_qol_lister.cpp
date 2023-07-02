@@ -175,9 +175,76 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   draw_set_clip(app, prev_clip);
 }
 
+function void
+qol_lister__backspace_text_field__default(Application_Links *app){
+  View_ID view = get_active_view(app, Access_Always);
+  Lister *lister = view_get_lister(app, view);
+  User_Input input = get_current_input(app);
+  b32 mod_ctl = has_modifier(&input, KeyCode_Control);
+  b32 mod_sft = has_modifier(&input, KeyCode_Shift);
+  if (lister != 0){
+    lister->text_field.string = (mod_ctl &&  mod_sft ? string_prefix(lister->text_field.string, 0) :
+                                 mod_ctl && !mod_sft ? qol_ctrl_backspace_string(app, lister->text_field.string) :
+                                 backspace_utf8(lister->text_field.string));
+    lister->key_string.string = (mod_ctl &&  mod_sft ? string_prefix(lister->key_string.string, 0) :
+                                 mod_ctl && !mod_sft ? qol_ctrl_backspace_string(app, lister->key_string.string) :
+                                 backspace_utf8(lister->key_string.string));
+    lister->item_index = 0;
+    lister_zero_scroll(lister);
+    lister_update_filtered_list(app, lister);
+  }
+}
+
+function void
+qol_lister__backspace_text_field__file_path(Application_Links *app){
+  View_ID view = get_this_ctx_view(app, Access_Always);
+  Lister *lister = view_get_lister(app, view);
+  User_Input input = get_current_input(app);
+  b32 mod_ctl = has_modifier(&input, KeyCode_Control);
+  b32 mod_sft = has_modifier(&input, KeyCode_Shift);
+  if (lister != 0){
+    if (lister->text_field.size > 0){
+      String_Const_u8 string = lister->text_field.string;
+      char last_char = string.str[string.size - 1];
+      lister->text_field.string = (mod_ctl &&  mod_sft ? string_prefix(string, string_find_first_slash(string)) :
+                                   mod_ctl && !mod_sft ? qol_ctrl_backspace_string(app, string) :
+                                   backspace_utf8(string));
+      if (character_is_slash(last_char)){
+        String_Const_u8 text_field = lister->text_field.string;
+        String_Const_u8 new_hot = string_remove_last_folder(text_field);
+        b32 use_mod_ctl = def_get_config_b32(vars_save_string_lit("lister_whole_word_backspace_when_modified"));
+        if (use_mod_ctl && (mod_ctl && !mod_sft)){
+          lister->text_field.size = new_hot.size;
+        }
+        set_hot_directory(app, new_hot);
+        // TODO(allen): We have to protect against lister_call_refresh_handler
+        // changing the text_field here. Clean this up.
+        String_u8 dingus = lister->text_field;
+        lister_call_refresh_handler(app, lister);
+        lister->text_field = dingus;
+      }
+      else{
+        String_Const_u8 text_field = lister->text_field.string;
+        String_Const_u8 new_key = string_front_of_path(text_field);
+        lister_set_key(lister, new_key);
+      }
+
+      lister->item_index = 0;
+      lister_zero_scroll(lister);
+      lister_update_filtered_list(app, lister);
+    }
+  }
+}
+
+function Custom_Command_Function*
+qol_lister_backspace_replace(Custom_Command_Function *func){
+  return (func == lister__backspace_text_field__default   ? qol_lister__backspace_text_field__default   :
+          func == lister__backspace_text_field__file_path ? qol_lister__backspace_text_field__file_path : func);
+}
+
 function Lister_Result
 qol_run_lister(Application_Links *app, Lister *lister){
-
+  lister->handlers.backspace = qol_lister_backspace_replace(lister->handlers.backspace);
   lister->filter_restore_point = begin_temp(lister->arena);
   lister_update_filtered_list(app, lister);
 

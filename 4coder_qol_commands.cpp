@@ -228,6 +228,18 @@ current_view_boundary_move(Application_Links *app, Scan_Direction direction, Bou
   view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
 }
 
+function void
+qol_set_temp(Application_Links *app, String_Const_u8 string){
+  buffer_replace_range(app, qol_temp_buffer, buffer_range(app, qol_temp_buffer), string);
+}
+
+function String_Const_u8
+qol_ctrl_backspace_string(Application_Links *app, String_Const_u8 string){
+  qol_set_temp(app, string);
+  i64 pos = scan(app, (Boundary_Function *)qol_boundary_ctrl_motion, qol_temp_buffer, Scan_Backward, string.size);
+  return string_prefix(string, pos);
+}
+
 CUSTOM_COMMAND_SIG(qol_ctrl_delete)
 CUSTOM_DOC("[QOL] Standard ctrl-delete")
 {
