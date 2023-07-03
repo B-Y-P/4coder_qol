@@ -39,8 +39,7 @@ def_search_normal_fopen(Arena *arena, char *file_name, char *opt){
 // NOTE(allen): Extension List
 
 function String_Const_u8_Array
-parse_extension_line_to_extension_list(Application_Links *app, Arena *arena, String_Const_u8 str){
-  ProfileScope(app, "parse extension line to extension list");
+parse_extension_line_to_extension_list(Arena *arena, String_Const_u8 str){
   i32 count = 0;
   for (u64 i = 0; i < str.size; i += 1){
     if (str.str[i] == '.'){
