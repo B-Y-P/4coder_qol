@@ -28,6 +28,7 @@ filebar_on_top = false;
 show_hex_colors = true;
 file_explorer_cli = "explorer";   // non-Windows set to "open"
 use_comment_annotations_highlight = true;  // highlight @iden in comments
+bot_line_count = 1.5f;
 
 scroll_margin_x = 1.f;
 scroll_margin_y = 2.f;
