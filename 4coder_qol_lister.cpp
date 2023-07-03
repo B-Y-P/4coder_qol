@@ -1,11 +1,36 @@
 
+global Lister_Node* g_qol_mouse_node;
+
+function Vec2_i32
+qol_lister_grid_dim(Application_Links *app, View_ID view, Lister *lister){
+  Face_ID face_id = get_face_id(app, 0);
+  Face_Metrics metrics = get_face_metrics(app, face_id);
+  Rect_f32 region = view_get_screen_rect(app, view);
+
+  u64 max_size = 0;
+  for (i32 i = 0; i < lister->filtered.count; i += 1){
+    Lister_Node *node = lister->filtered.node_ptrs[i];
+    max_size = Max(max_size, node->string.size);
+  }
+
+  f32 f_wid = rect_width(region) / (metrics.normal_advance*f32(max_size + 2));
+  i32 wid = clamp(3, i32(f_wid), 5);
+  i32 hit = (lister->filtered.count + wid-1) / wid;
+
+  return V2i32(wid, hit);
+}
+
 function void
 qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   Scratch_Block scratch(app);
 
+  Render_Caller_Function *render_caller = (Render_Caller_Function*)get_custom_hook(app, HookID_RenderCaller);
+  render_caller(app, frame_info, view);
+
+  g_qol_mouse_node = 0;
   Lister *lister = view_get_lister(app, view);
   if (lister == 0){ return; }
-  Rect_f32 region = draw_background_and_margin(app, view);
+  Rect_f32 region = view_get_screen_rect(app, view);
   Rect_f32 prev_clip = draw_set_clip(app, region);
   b32 is_active_view = (view == get_active_view(app, Access_Always));
 
@@ -14,6 +39,16 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   f32 line_height = metrics.line_height;
   f32 block_height = lister_get_block_height(line_height);
   f32 text_field_height = lister_get_text_field_height(line_height) + 2.f;
+  Vec2_i32 grid = qol_lister_grid_dim(app, view, lister);
+  f32 block_width = rect_width(region) / f32(grid.x);
+
+  {
+    Rect_f32_Pair pair = rect_split_top_bottom(region, 0.5f*rect_height(region));
+    draw_rectangle(app, pair.min, 0.f, 0x55000000);
+    draw_rectangle(app, pair.max, 0.f, fcolor_resolve(fcolor_id(defcolor_margin_active)));
+    region = rect_inner(pair.max, 3.f);
+    draw_rectangle_fcolor(app, region, 0.f, fcolor_id(defcolor_back));
+  }
 
   // NOTE(allen): file bar
   // TODO(allen): What's going on with 'showing_file_bar'? I found it like this.
@@ -30,9 +65,6 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   Mouse_State mouse = get_mouse_state(app);
   Vec2_f32 m_p = V2f32(mouse.p);
   Vec2_f32 cursor_pos = {};
-
-  lister->visible_count = (i32)((rect_height(region)/block_height)) - 3;
-  lister->visible_count = clamp_bot(1, lister->visible_count);
 
   Rect_f32 text_field_rect = {};
   Rect_f32 list_rect = {};
@@ -71,36 +103,26 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     }
   }
 
-
-  Range_f32 x = rect_range_x(list_rect);
   draw_set_clip(app, list_rect);
 
-  // NOTE(allen): auto scroll to the item if the flag is set.
-  f32 scroll_y = lister->scroll.position.y;
+  lister->visible_count = grid.x*(i32)(rect_height(list_rect)/block_height);
+  lister->visible_count = clamp_bot(1, lister->visible_count);
 
+  i32 count = lister->filtered.count;
+  f32 scroll_y = lister->scroll.position.y;
+  f32 scroll_h = grid.y*block_height;
+  f32 view_h = rect_height(list_rect);
+  Range_f32 scroll_range = If32(0.f, scroll_h);
+
+  // NOTE(allen): auto scroll to the item if the flag is set.
   if (lister->set_vertical_focus_to_item){
     lister->set_vertical_focus_to_item = false;
-    Range_f32 item_y = If32_size(lister->item_index*block_height, block_height);
-    f32 view_h = rect_height(list_rect);
-    Range_f32 view_y = If32_size(scroll_y, view_h);
-    if (view_y.min > item_y.min || item_y.max > view_y.max){
-      f32 item_center = (item_y.min + item_y.max)*0.5f;
-      f32 view_center = (view_y.min + view_y.max)*0.5f;
-      f32 margin = view_h*.3f;
-      margin = clamp_top(margin, block_height*3.f);
-      if (item_center < view_center){
-        lister->scroll.target.y = item_y.min - margin;
-      }
-      else{
-        f32 target_bot = item_y.max + margin;
-        lister->scroll.target.y = target_bot - view_h;
-      }
-    }
+    i32 yi = (lister->item_index / grid.x);
+    f32 item_center = (yi + 0.5f)*block_height;
+    lister->scroll.target.y = item_center - 0.5f*view_h;
   }
 
   // NOTE(allen): clamp scroll target and position; smooth scroll rule
-  i32 count = lister->filtered.count;
-  Range_f32 scroll_range = If32(0.f, clamp_bot(0.f, count*block_height - block_height));
   lister->scroll.target.y = clamp_range(scroll_range, lister->scroll.target.y);
   lister->scroll.target.x = 0.f;
 
@@ -115,19 +137,23 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
 
   scroll_y = lister->scroll.position.y;
   f32 y_pos = list_rect.y0 - scroll_y;
+  i32 xi = grid.x-1;
 
   i32 first_index = (i32)(scroll_y/block_height);
   y_pos += first_index*block_height;
+  first_index *= grid.x;
 
+  Fancy_Block block = {};
   for (i32 i = first_index; i < count; i += 1){
     Lister_Node *node = lister->filtered.node_ptrs[i];
 
     if (y_pos >= region.y1){ break; }
-    Range_f32 y = If32(y_pos, y_pos + block_height);
-    y_pos = y.max;
+    xi = i % grid.x;
+    f32 x_pos = list_rect.x0 + xi*block_width;
 
-    Rect_f32 item_rect = Rf32(x, y);
+    Rect_f32 item_rect = Rf32_xy_wh(x_pos, y_pos, block_width, block_height);
     Rect_f32 item_inner = rect_inner(item_rect, 3.f);
+    y_pos += block_height*(xi == grid.x-1);
 
     b32 hovered = rect_contains_point(item_rect, m_p);
     UI_Highlight_Level highlight = UIHighlight_None;
@@ -135,21 +161,29 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
       highlight = UIHighlight_Active;
     }
     else if (node->user_data == lister->hot_user_data){
-      if (hovered){
-        highlight = UIHighlight_Active;
-      }
-      else{
-        highlight = UIHighlight_Hover;
-      }
+      highlight = (hovered ? UIHighlight_Active : UIHighlight_Hover);
     }
     else if (hovered){
       highlight = UIHighlight_Hover;
     }
 
+    if (hovered){
+      g_qol_mouse_node = node;
+      Fancy_Line *line1 = push_fancy_line(scratch, &block, face_id);
+      u64 index = string_find_last(node->status, '\n');
+
+      if(index < node->status.size){
+        push_fancy_string(scratch, line1, fcolor_id(defcolor_pop2), string_prefix(node->status, index));
+        Fancy_Line *line2 = push_fancy_line(scratch, &block, face_id);
+        push_fancy_string(scratch, line2, fcolor_id(defcolor_text_default), string_postfix(node->status, node->status.size-1 - index));
+      }else{
+        push_fancy_string(scratch, line1, fcolor_id(defcolor_pop2), node->status);
+      }
+    }
+
     u64 lister_roundness_100 = def_get_config_u64(app, vars_save_string_lit("lister_roundness"));
     f32 roundness = block_height*lister_roundness_100*0.01f;
-    draw_rectangle_fcolor(app, item_rect, roundness, get_item_margin_color(highlight));
-    draw_rectangle_fcolor(app, item_inner, roundness, get_item_margin_color(highlight, 1));
+    draw_rectangle_fcolor(app, item_rect, roundness, get_item_margin_color(highlight, 1));
 
     Fancy_Line line = {};
     push_fancy_string(scratch, &line, fcolor_id(defcolor_text_default), node->string);
@@ -158,8 +192,21 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
 
     Vec2_f32 p = item_inner.p0 + V2f32(3.f, (block_height - line_height)*0.5f);
     draw_fancy_line(app, face_id, fcolor_zero(), &line, p);
+
+    draw_rectangle_outline_fcolor(app, item_rect, roundness, 5.f, get_item_margin_color(highlight));
   }
 
+  if (xi != grid.x-1){
+    f32 x_pos = (xi+1)*block_width;
+    Rect_f32 cover_rect = Rf32(x_pos, y_pos+3.f, list_rect.x1, y_pos+block_height);
+    draw_rectangle_fcolor(app, cover_rect, 0.f, fcolor_id(defcolor_back));
+  }
+
+  if (g_qol_mouse_node){
+    f32 x_padding = metrics.normal_advance;
+    f32 x_half_padding = x_padding*0.5f;
+    draw_drop_down(app, face_id, &block, m_p, region, x_padding, x_half_padding, fcolor_id(defcolor_margin_hover), fcolor_id(defcolor_back));
+  }
 
   {
     draw_set_clip(app, region);
@@ -263,6 +310,8 @@ qol_run_lister(Application_Links *app, Lister *lister){
       break;
     }
 
+    Vec2_i32 grid = qol_lister_grid_dim(app, view, lister);
+
     Lister_Activation_Code result = ListerActivation_Continue;
     b32 handled = true;
     switch (in.event.kind){
@@ -274,9 +323,9 @@ qol_run_lister(Application_Links *app, Lister *lister){
       }break;
 
       case InputEventKind_KeyStroke:{
-        switch (in.event.key.code){
-          case KeyCode_Return:
-          case KeyCode_Tab:{
+        Key_Code code = in.event.key.code;
+        switch (code){
+          case KeyCode_Return:{
             void *user_data = 0;
             if (0 <= lister->raw_item_index &&
                 lister->raw_item_index < lister->options.count){
@@ -299,45 +348,27 @@ qol_run_lister(Application_Links *app, Lister *lister){
             }
           }break;
 
-          case KeyCode_Up:{
+          case KeyCode_Tab:{
             if (lister->handlers.navigate != 0){
-              lister->handlers.navigate(app, view, lister, -1);
-            }
-            else if (lister->handlers.key_stroke != 0){
-              result = lister->handlers.key_stroke(app);
-            }
-            else{
-              handled = false;
+              i32 delta = (has_modifier(&in.event.key.modifiers, KeyCode_Shift) ? -1 : 1);
+              lister->handlers.navigate(app, view, lister, delta);
             }
           }break;
 
-          case KeyCode_Down:{
+          case KeyCode_PageUp:
+          case KeyCode_PageDown:
+          case KeyCode_Up:
+          case KeyCode_Down:
+          case KeyCode_Left:
+          case KeyCode_Right:{
             if (lister->handlers.navigate != 0){
-              lister->handlers.navigate(app, view, lister, 1);
-            }
-            else if (lister->handlers.key_stroke != 0){
-              result = lister->handlers.key_stroke(app);
-            }
-            else{
-              handled = false;
-            }
-          }break;
-
-          case KeyCode_PageUp:{
-            if (lister->handlers.navigate != 0){
-              lister->handlers.navigate(app, view, lister, -lister->visible_count);
-            }
-            else if (lister->handlers.key_stroke != 0){
-              result = lister->handlers.key_stroke(app);
-            }
-            else{
-              handled = false;
-            }
-          }break;
-
-          case KeyCode_PageDown:{
-            if (lister->handlers.navigate != 0){
-              lister->handlers.navigate(app, view, lister, lister->visible_count);
+              i32 delta = (code == KeyCode_PageUp   ? -lister->visible_count :
+                           code == KeyCode_PageDown ?  lister->visible_count :
+                           code == KeyCode_Up       ? -grid.x :
+                           code == KeyCode_Down     ?  grid.x :
+                           code == KeyCode_Left     ? -1 :
+                           code == KeyCode_Right    ?  1 : 0);
+              lister->handlers.navigate(app, view, lister, delta);
             }
             else if (lister->handlers.key_stroke != 0){
               result = lister->handlers.key_stroke(app);
@@ -373,13 +404,9 @@ qol_run_lister(Application_Links *app, Lister *lister){
       case InputEventKind_MouseButtonRelease:{
         switch (in.event.mouse.code){
           case MouseCode_Left:{
-            if (lister->hot_user_data != 0){
-              Vec2_f32 p = V2f32(in.event.mouse.p);
-              void *clicked = lister_user_data_at_p(app, view, lister, p);
-              if (lister->hot_user_data == clicked){
-                lister_activate(app, lister, clicked, true);
-                result = ListerActivation_Finished;
-              }
+            if (g_qol_mouse_node){
+              lister_activate(app, lister, g_qol_mouse_node->user_data, true);
+              result = ListerActivation_Finished;
             }
             lister->hot_user_data = 0;
           }break;
