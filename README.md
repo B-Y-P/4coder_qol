@@ -46,6 +46,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [32 - lister ctrl-backspace](#c32)
 - [33 - lister multi-column grid](#c33)
 - [34 - lister bot view](#c34)
+- [35 - isearch ctrl-backspace](#c35)
 
 ---
 
@@ -362,6 +363,12 @@ Try to show a bit more with the shorter listers
 Trying to make listers a bit more joyful to use, not fully cover the code you're working on\
 While this is *much* simpler than my initial attempt (one of the first customizations I wrote)\
 I still feel it's far from perfect
+
+</br>
+
+### 35 - isearch ctrl-backspace <a name="c35"/>
+Once you realize not only is ctrl-backspace wrong, but it doesn't have to be,\
+you just gotta fix it wherever you can, even if it takes 250 loc to do so
 
 </br>
 
