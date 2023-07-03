@@ -90,6 +90,8 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(goto_end_of_file,       KeyCode_PageDown, KeyCode_Control);
   Bind(move_up_to_blank_line_end,        KeyCode_Up, KeyCode_Control);
   Bind(move_down_to_blank_line_end,      KeyCode_Down, KeyCode_Control);
+  Bind(qol_find_divider_up,              KeyCode_Up, KeyCode_Control, KeyCode_Shift);
+  Bind(qol_find_divider_down,            KeyCode_Down, KeyCode_Control, KeyCode_Shift);
   Bind(move_left_whitespace_boundary,    KeyCode_Left, KeyCode_Control);
   Bind(move_right_whitespace_boundary,   KeyCode_Right, KeyCode_Control);
   Bind(backspace_alpha_numeric_boundary, KeyCode_Backspace, KeyCode_Control);
