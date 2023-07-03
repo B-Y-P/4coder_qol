@@ -54,6 +54,7 @@ function void qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 f
 function void qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id);
 
 #include "4coder_qol_commands.cpp"
+#include "4coder_qol_isearch.cpp"
 #include "4coder_qol_draw.cpp"
 #include "4coder_qol_lister.cpp"
 
