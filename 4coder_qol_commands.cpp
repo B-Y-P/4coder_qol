@@ -179,7 +179,10 @@ CUSTOM_DOC("[QOL] Prints Lines of Code")
       loc += buffer_get_line_count(app, buffer);
     }
   }
-  printf_message(app, "LOC: %'lld lines\n", loc);
+  Scratch_Block scratch(app);
+  String_Const_u8 message = push_stringf(scratch, "LOC: %'lld lines\n", loc);
+  qol_bot_text_set(message);
+  print_message(app, message);
 }
 
 CUSTOM_COMMAND_SIG(qol_explorer)

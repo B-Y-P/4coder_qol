@@ -29,6 +29,7 @@ highlight_line_at_cursor = true;
 filebar_on_top = false;
 show_hex_colors = true;
 file_explorer_cli = "explorer";   // non-Windows set to "open"
+bot_line_count = 1.5f;
 
 // ""  - Rectangle
 // "|" - Thin-line
