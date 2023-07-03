@@ -350,6 +350,37 @@ qol_draw_compile_errors(Application_Links *app, Buffer_ID buffer, Text_Layout_ID
   }
 }
 
+function Rect_f32
+qol_draw_query_bars(Application_Links *app, Rect_f32 region, View_ID view_id, Face_ID face_id){
+  Face_Metrics face_metrics = get_face_metrics(app, face_id);
+  f32 line_height = face_metrics.line_height;
+
+  Query_Bar *space[32];
+  Query_Bar_Ptr_Array query_bars = {};
+  query_bars.ptrs = space;
+  if (get_active_query_bars(app, view_id, ArrayCount(space), &query_bars)){
+    for (i32 i = 0; i < query_bars.count; i += 1){
+      Rect_f32_Pair pair = layout_query_bar_on_bot(region, line_height, 1);
+
+      Query_Bar *query_bar = query_bars.ptrs[i];
+      Rect_f32 bar_rect = pair.max;
+
+      Scratch_Block scratch(app);
+      Fancy_Line list = {};
+      push_fancy_string(scratch, &list, fcolor_id(defcolor_pop1),         query_bar->prompt);
+      push_fancy_string(scratch, &list, fcolor_id(defcolor_text_default), query_bar->string);
+      Vec2_f32 p = bar_rect.p0 + V2f32(2.f, 2.f);
+      p = draw_fancy_line(app, face_id, fcolor_zero(), &list, p);
+      if (i == 0){
+        draw_rectangle_fcolor(app, Rf32_xy_wh(p.x, p.y, 2.f, face_metrics.line_height), 0.f, fcolor_id(defcolor_cursor, 0));
+      }
+
+      region = pair.min;
+    }
+  }
+  return(region);
+}
+
 function void
 qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buffer_ID buffer, Text_Layout_ID text_layout_id, Rect_f32 rect){
   ProfileScope(app, "qol render buffer");
@@ -504,6 +535,9 @@ qol_render_caller(Application_Links *app, Frame_Info frame_info, View_ID view_id
   f32 normal_advance = face_metrics.normal_advance;
   f32 digit_advance = face_metrics.decimal_digit_advance;
 
+  // NOTE(allen): query bars
+  region = qol_draw_query_bars(app, region, view_id, face_id);
+
   // NOTE(allen): file bar
   b64 showing_file_bar = false;
   if (view_get_setting(app, view_id, ViewSetting_ShowFileBar, &showing_file_bar) && showing_file_bar){
@@ -533,9 +567,6 @@ qol_render_caller(Application_Links *app, Frame_Info frame_info, View_ID view_id
   if (delta.still_animating){
     animate_in_n_milliseconds(app, 0);
   }
-
-  // NOTE(allen): query bars
-  region = default_draw_query_bars(app, region, view_id, face_id);
 
   // NOTE(allen): FPS hud
   if (show_fps_hud){
