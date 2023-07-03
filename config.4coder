@@ -13,7 +13,7 @@ bind_by_physical_key = false;
 
 // UI
 use_file_bars = true;
-hide_file_bar_in_ui = true;
+hide_file_bar_in_ui = false;
 use_error_highlight = true;
 use_jump_highlight = true;
 use_scope_highlight = true;
