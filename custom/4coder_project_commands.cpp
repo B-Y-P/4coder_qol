@@ -448,47 +448,54 @@ prj_generate_project(Arena *scratch, String8 script_path, String8 script_file, S
 
   String8 file_name = push_u8_stringf(scratch, "%S/project.4coder", script_path);
 
+  String_Const_u8 treat_as_code_string = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
+  String_Const_u8_Array extensions = parse_extension_line_to_extension_list(scratch, treat_as_code_string);
+
   FILE *out = fopen((char*)file_name.str, "wb");
   if (out != 0){
     fprintf(out, "version(2);\n");
     fprintf(out, "project_name = \"%.*s\";\n", string_expand(binary_file));
+
+    fprintf(out, "\n");
+
     fprintf(out, "patterns = {\n");
-    fprintf(out, "\"*.c\",\n");
-    fprintf(out, "\"*.cpp\",\n");
-    fprintf(out, "\"*.h\",\n");
-    fprintf(out, "\"*.m\",\n");
-    fprintf(out, "\"*.bat\",\n");
-    fprintf(out, "\"*.sh\",\n");
-    fprintf(out, "\"*.4coder\",\n");
+    fprintf(out, " \"*.bat\",\n");
+    fprintf(out, " \"*.sh\",\n");
+    for (i32 i = 0; i < extensions.count; ++i){
+      fprintf(out, " \"*.%.*s\",\n", string_expand(extensions.strings[i]));
+    }
     fprintf(out, "};\n");
-    fprintf(out, "blacklist_patterns = {\n");
-    fprintf(out, "\".*\",\n");
-    fprintf(out, "};\n");
-    fprintf(out, "load_paths_base = {\n");
-    fprintf(out, " { \".\", .relative = true, .recursive = true, },\n");
-    fprintf(out, "};\n");
+    fprintf(out, "blacklist_patterns = { \".*\", };\n");
+
+    fprintf(out, "\n");
+
+    fprintf(out, "load_paths_base = { { .path = \".\", .relative = true, .recursive = true, }, };\n");
     fprintf(out, "load_paths = {\n");
-    fprintf(out, " .win = load_paths_base,\n");
+    fprintf(out, " .win   = load_paths_base,\n");
     fprintf(out, " .linux = load_paths_base,\n");
-    fprintf(out, " .mac = load_paths_base,\n");
+    fprintf(out, " .mac   = load_paths_base,\n");
     fprintf(out, "};\n");
 
     fprintf(out, "\n");
 
     fprintf(out, "commands = {\n");
-    fprintf(out, " .build = { .out = \"*compilation*\", .footer_panel = true, .save_dirty_files = true,\n");
-    fprintf(out, "   .win = \"%.*s.bat\",\n", string_expand(script_file));
+    fprintf(out, " .build = {\n");
+    fprintf(out, "   .out = \"*compilation*\", .footer_panel = true, .save_dirty_files = true,\n");
+    fprintf(out, "   .win   = \"%.*s.bat\",\n", string_expand(script_file));
     fprintf(out, "   .linux = \"./%.*s.sh\",\n", string_expand(script_file));
-    fprintf(out, "   .mac = \"./%.*s.sh\", },\n", string_expand(script_file));
-    fprintf(out, " .run = { .out = \"*run*\", .footer_panel = false, .save_dirty_files = false,\n");
-    fprintf(out, "   .win = \"%.*s\\\\%.*s\",\n", string_expand(od_win), string_expand(bf_win));
+    fprintf(out, "   .mac   = \"./%.*s.sh\", \n},\n", string_expand(script_file));
+    fprintf(out, " .run = {\n");
+    fprintf(out, "   .out = \"*run*\", .footer_panel = false, .save_dirty_files = false,\n");
+    fprintf(out, "   .win   = \"%.*s\\\\%.*s\",\n", string_expand(od_win), string_expand(bf_win));
     fprintf(out, "   .linux = \"%.*s/%.*s\",\n", string_expand(od), string_expand(bf));
-    fprintf(out, "   .mac = \"%.*s/%.*s\", },\n", string_expand(od), string_expand(bf));
+    fprintf(out, "   .mac   = \"%.*s/%.*s\", \n},\n", string_expand(od), string_expand(bf));
     fprintf(out, "};\n");
 
+    fprintf(out, "\n");
+
     fprintf(out, "fkey_command = {\n");
-    fprintf(out, ".F1 = \"run\";\n");
-    fprintf(out, ".F2 = \"run\";\n");
+    fprintf(out, " .F1 = \"build\",\n");
+    fprintf(out, " .F2 = \"run\",\n");
     fprintf(out, "};\n");
 
     fclose(out);
@@ -820,7 +827,7 @@ CUSTOM_DOC("Closes any buffer with a filename ending with an extension configure
 {
   Scratch_Block scratch(app);
   String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
-  String8Array extensions = parse_extension_line_to_extension_list(app, scratch, treat_as_code);
+  String8Array extensions = parse_extension_line_to_extension_list(scratch, treat_as_code);
   prj_close_files_with_ext(app, extensions);
 }
 
@@ -829,7 +836,7 @@ CUSTOM_DOC("Open all code in the current directory. File types are determined by
 {
   Scratch_Block scratch(app);
   String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
-  String8Array extensions = parse_extension_line_to_extension_list(app, scratch, treat_as_code);
+  String8Array extensions = parse_extension_line_to_extension_list(scratch, treat_as_code);
   prj_open_all_files_with_ext_in_hot(app, extensions, 0);
 }
 
@@ -838,7 +845,7 @@ CUSTOM_DOC("Works as open_all_code but also runs in all subdirectories.")
 {
   Scratch_Block scratch(app);
   String8 treat_as_code = def_get_config_string(scratch, vars_save_string_lit("treat_as_code"));
-  String8Array extensions = parse_extension_line_to_extension_list(app, scratch, treat_as_code);
+  String8Array extensions = parse_extension_line_to_extension_list(scratch, treat_as_code);
   prj_open_all_files_with_ext_in_hot(app, extensions, PrjOpenFileFlag_Recursive);
 }
 
