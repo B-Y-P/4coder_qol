@@ -26,6 +26,8 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unimportant, true);
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unkillable, true);
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_ReadOnly, false);
+
+    qol_lister_init(app);
   }
 
   {
@@ -65,6 +67,8 @@ qol_tick(Application_Links *app, Frame_Info frame_info){
   }
 
   qol_tick_colors(app, frame_info);
+
+  qol_tick_lister(app, frame_info);
 }
 
 BUFFER_HOOK_SIG(qol_file_save){

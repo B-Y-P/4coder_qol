@@ -1,11 +1,15 @@
 
+global View_ID g_qol_lister_view;
+global View_ID g_qol_view;
+global Lister* g_qol_lister;
+global f32 g_qol_cur_bot_height;
 global Lister_Node* g_qol_mouse_node;
 
 function Vec2_i32
-qol_lister_grid_dim(Application_Links *app, View_ID view, Lister *lister){
+qol_lister_grid_dim(Application_Links *app, Lister *lister){
   Face_ID face_id = get_face_id(app, 0);
   Face_Metrics metrics = get_face_metrics(app, face_id);
-  Rect_f32 region = view_get_screen_rect(app, view);
+  Rect_f32 region = view_get_screen_rect(app, g_qol_lister_view);
 
   u64 max_size = 0;
   for (i32 i = 0; i < lister->filtered.count; i += 1){
@@ -24,60 +28,52 @@ function void
 qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   Scratch_Block scratch(app);
 
-  Render_Caller_Function *render_caller = (Render_Caller_Function*)get_custom_hook(app, HookID_RenderCaller);
-  render_caller(app, frame_info, view);
-
   g_qol_mouse_node = 0;
-  Lister *lister = view_get_lister(app, view);
-  if (lister == 0){ return; }
   Rect_f32 region = view_get_screen_rect(app, view);
-  Rect_f32 prev_clip = draw_set_clip(app, region);
-  b32 is_active_view = (view == get_active_view(app, Access_Always));
+  if (rect_height(region) < g_qol_cur_bot_height){
+    region.y0 = region.y1 - g_qol_cur_bot_height;
+  }
+
+  draw_rectangle_fcolor(app, region, 0.f, fcolor_id(defcolor_back));
 
   Face_ID face_id = get_face_id(app, 0);
   Face_Metrics metrics = get_face_metrics(app, face_id);
   f32 line_height = metrics.line_height;
+  f32 text_field_height = qol_bot_text_height(app, metrics);
+
+  Rect_f32 list_rect = {};
+  Rect_f32 text_field_rect = {};
+  {
+    Rect_f32_Pair pair = rect_split_top_bottom_neg(region, text_field_height);
+    list_rect = pair.min;
+    text_field_rect = pair.max;
+  }
+
+  local_persist Vec2_f32 cur_cursor_pos = V2f32(-1.f, -1.f);
+
+  f32 bot_text_y = text_field_rect.y1 - qol_bot_text_y_offset(app, metrics);
+  Vec2_f32 p = V2f32(text_field_rect.x0 + 3.f, bot_text_y);
+  p = draw_string(app, face_id, g_qol_bot_string.string, p, fcolor_id(defcolor_text_default));
+
+  Lister *lister = g_qol_lister;
+  if (lister == 0){
+    cur_cursor_pos = V2f32(-1.f, -1.f);
+    return;
+  }
+
+  Vec2_i32 grid = qol_lister_grid_dim(app, lister);
+
   f32 block_height = lister_get_block_height(line_height);
-  f32 text_field_height = lister_get_text_field_height(line_height) + 2.f;
-  Vec2_i32 grid = qol_lister_grid_dim(app, view, lister);
   f32 block_width = rect_width(region) / f32(grid.x);
 
-  {
-    Rect_f32_Pair pair = rect_split_top_bottom(region, 0.5f*rect_height(region));
-    draw_rectangle(app, pair.min, 0.f, 0x55000000);
-    draw_rectangle(app, pair.max, 0.f, fcolor_resolve(fcolor_id(defcolor_margin_active)));
-    region = rect_inner(pair.max, 3.f);
-    draw_rectangle_fcolor(app, region, 0.f, fcolor_id(defcolor_back));
-  }
-
-  // NOTE(allen): file bar
-  // TODO(allen): What's going on with 'showing_file_bar'? I found it like this.
-  b64 showing_file_bar = false;
-  b32 hide_file_bar_in_ui = def_get_config_b32(vars_save_string_lit("hide_file_bar_in_ui"));
-  if (view_get_setting(app, view, ViewSetting_ShowFileBar, &showing_file_bar) &&
-      showing_file_bar && !hide_file_bar_in_ui){
-    Rect_f32_Pair pair = layout_file_bar_on_bot(region, line_height);
-    Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
-    draw_file_bar(app, view, buffer, face_id, pair.max);
-    region = pair.min;
-  }
+  Rect_f32 prev_clip = draw_set_clip(app, region);
 
   Mouse_State mouse = get_mouse_state(app);
   Vec2_f32 m_p = V2f32(mouse.p);
-  Vec2_f32 cursor_pos = {};
-
-  Rect_f32 text_field_rect = {};
-  Rect_f32 list_rect = {};
-  {
-    Rect_f32_Pair pair = rect_split_top_bottom_neg(region, text_field_height);
-    text_field_rect = pair.max;
-    list_rect = pair.min;
-  }
+  Vec2_f32 nxt_cursor_pos = {};
 
   {
-    Vec2_f32 p = V2f32(text_field_rect.x0 + 3.f, text_field_rect.y0);
     Fancy_Line text_field = {};
-    push_fancy_string(scratch, &text_field, fcolor_id(defcolor_pop1), lister->query.string);
     push_fancy_stringf(scratch, &text_field, " ");
     p = draw_fancy_line(app, face_id, fcolor_zero(), &text_field, p);
 
@@ -92,16 +88,14 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     if (cap_width < width){
       Rect_f32 prect = draw_set_clip(app, Rf32(p.x, text_field_rect.y0, p.x + cap_width, text_field_rect.y1));
       p.x += cap_width - width;
-      cursor_pos = draw_fancy_line(app, face_id, fcolor_zero(), &text_field, p);
+      nxt_cursor_pos = draw_fancy_line(app, face_id, fcolor_zero(), &text_field, p);
       draw_set_clip(app, prect);
     }
     else{
-      cursor_pos = draw_fancy_line(app, face_id, fcolor_zero(), &text_field, p);
-    }
-    if (is_active_view){
-      qol_nxt_cursor_pos = cursor_pos;
+      nxt_cursor_pos = draw_fancy_line(app, face_id, fcolor_zero(), &text_field, p);
     }
   }
+  nxt_cursor_pos.y = rect_center(text_field_rect).y;
 
   draw_set_clip(app, list_rect);
 
@@ -111,7 +105,7 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
   i32 count = lister->filtered.count;
   f32 scroll_y = lister->scroll.position.y;
   f32 scroll_h = grid.y*block_height;
-  f32 view_h = rect_height(list_rect);
+  f32 view_h = g_qol_cur_bot_height;
   Range_f32 scroll_range = If32(0.f, scroll_h);
 
   // NOTE(allen): auto scroll to the item if the flag is set.
@@ -190,8 +184,8 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
     push_fancy_stringf(scratch, &line, " ");
     push_fancy_string(scratch, &line, fcolor_id(defcolor_pop2), node->status);
 
-    Vec2_f32 p = item_inner.p0 + V2f32(3.f, (block_height - line_height)*0.5f);
-    draw_fancy_line(app, face_id, fcolor_zero(), &line, p);
+    Vec2_f32 item_p = item_inner.p0 + V2f32(3.f, (block_height - line_height)*0.5f);
+    draw_fancy_line(app, face_id, fcolor_zero(), &line, item_p);
 
     draw_rectangle_outline_fcolor(app, item_rect, roundness, 5.f, get_item_margin_color(highlight));
   }
@@ -210,10 +204,20 @@ qol_lister_render(Application_Links *app, Frame_Info frame_info, View_ID view){
 
   {
     draw_set_clip(app, region);
-    f32 line_diff = abs_f32(qol_cur_cursor_pos.y - cursor_pos.y)/line_height;
-    f32 interp_t = unlerp(2.f, line_diff, 8.f);
-    f32 cursor_wid = lerp(2.f, cubic_reinterpolate(clamp(0.f, interp_t, 1.f)), metrics.normal_advance);
-    Rect_f32 cursor_rect = Rf32_xy_wh(qol_cur_cursor_pos, V2f32(cursor_wid, line_height));
+    if (cur_cursor_pos.x < 0.f){
+      cur_cursor_pos = nxt_cursor_pos;
+    }
+
+    qol_interp(cur_cursor_pos, nxt_cursor_pos, frame_info.animation_dt, 1e-14f);
+    if (!near_zero(cur_cursor_pos - nxt_cursor_pos, 0.5f)){
+      animate_in_n_milliseconds(app, 0);
+    }
+
+    Vec2_f32 cursor_half_dim = V2f32(1.f, metrics.ascent - 3.f);
+    Rect_f32 cursor_rect = Rf32(cur_cursor_pos, cur_cursor_pos);
+    cursor_rect.p0 -= cursor_half_dim;
+    cursor_rect.p1 += cursor_half_dim;
+
     Rect_f32 dividor_rect = rect_split_top_bottom_neg(list_rect, 2.f).max;
     draw_rectangle_fcolor(app, cursor_rect, 0.f, fcolor_id(defcolor_cursor, 0));
     draw_rectangle_fcolor(app, dividor_rect, 0.f, get_item_margin_color(UIHighlight_Active));
@@ -297,10 +301,13 @@ qol_run_lister(Application_Links *app, Lister *lister){
 
   View_ID view = get_this_ctx_view(app, Access_Always);
   View_Context ctx = view_current_context(app, view);
-  ctx.render_caller = qol_lister_render;
   ctx.hides_buffer = true;
   View_Context_Block ctx_block(app, view, &ctx);
   lister->handlers.navigate(app, view, lister, 0);
+
+  g_qol_view = view;
+  g_qol_lister = lister;
+  qol_bot_text_set(lister->query.string);
 
   for (;;){
     User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
@@ -310,7 +317,7 @@ qol_run_lister(Application_Links *app, Lister *lister){
       break;
     }
 
-    Vec2_i32 grid = qol_lister_grid_dim(app, view, lister);
+    Vec2_i32 grid = qol_lister_grid_dim(app, lister);
 
     Lister_Activation_Code result = ListerActivation_Continue;
     b32 handled = true;
@@ -326,10 +333,10 @@ qol_run_lister(Application_Links *app, Lister *lister){
         Key_Code code = in.event.key.code;
         switch (code){
           case KeyCode_Return:{
-            void *user_data = 0;
-            if (0 <= lister->raw_item_index &&
-                lister->raw_item_index < lister->options.count){
-              user_data = lister_get_user_data(lister, lister->raw_item_index);
+            void *user_data = lister_get_user_data(lister, lister->raw_item_index);
+            if (user_data != 0){
+              qol_bot_text_append(string_u8_litexpr(" "));
+              qol_bot_text_append(lister->highlighted_node->string);
             }
             lister_activate(app, lister, user_data, false);
             result = ListerActivation_Finished;
@@ -405,6 +412,8 @@ qol_run_lister(Application_Links *app, Lister *lister){
         switch (in.event.mouse.code){
           case MouseCode_Left:{
             if (g_qol_mouse_node){
+              qol_bot_text_append(string_u8_litexpr(" "));
+              qol_bot_text_append(g_qol_mouse_node->string);
               lister_activate(app, lister, g_qol_mouse_node->user_data, true);
               result = ListerActivation_Finished;
             }
@@ -459,7 +468,68 @@ qol_run_lister(Application_Links *app, Lister *lister){
         lister_call_refresh_handler(app, lister);
       }
     }
+
+    view_set_active(app, view);
   }
 
+  g_qol_lister = 0;
   return lister->out;
+}
+
+function void
+qol_tick_lister(Application_Links *app, Frame_Info frame_info){
+  Face_ID face_id = get_face_id(app, 0);
+  Face_Metrics metrics = get_face_metrics(app, face_id);
+  f32 line_height = metrics.line_height;
+  f32 block_height = lister_get_block_height(line_height);
+  f32 text_field_height = qol_bot_text_height(app, metrics);
+
+  f32 max_height = 0.5f*rect_height(global_get_screen_rectangle(app));
+  f32 qol_nxt_bottom_height = text_field_height;
+
+  if (g_qol_lister){
+    Vec2_i32 grid = qol_lister_grid_dim(app, g_qol_lister);
+    qol_nxt_bottom_height += grid.y*block_height;
+    view_set_active(app, g_qol_view);
+  }
+
+  qol_nxt_bottom_height = Min(qol_nxt_bottom_height, max_height);
+
+  qol_interp(g_qol_cur_bot_height, qol_nxt_bottom_height, frame_info.animation_dt, 1e-14f);
+  if (abs_f32(g_qol_cur_bot_height - qol_nxt_bottom_height) >= 1.f){
+    animate_in_n_milliseconds(app, 0);
+  }
+  else{
+    g_qol_cur_bot_height = qol_nxt_bottom_height;
+  }
+  view_set_split_pixel_size(app, g_qol_lister_view, (i32)g_qol_cur_bot_height);
+}
+
+function void
+qol_lister_spin(Application_Links *app){
+  View_ID view = get_this_ctx_view(app, Access_Always);
+  View_Context ctx = view_current_context(app, view);
+  ctx.render_caller = qol_lister_render;
+  ctx.hides_buffer = true;
+  View_Context_Block ctx_block(app, view, &ctx);
+  change_active_panel_backwards(app);
+
+  for (;;){
+    User_Input in = get_next_input(app, EventPropertyGroup_Any, 0);
+    if (in.abort){ break; }
+    leave_current_input_unhandled(app);
+  }
+}
+
+function void
+qol_lister_init(Application_Links *app){
+  Panel_ID root = panel_get_root(app);
+  Panel_ID split = panel_split(app, root, Dimension_Y);
+  if (split){
+    panel_set_split(app, split, PanelSplitKind_FixedPixels_Max, 1.f);
+    g_qol_lister_view = panel_get_view(app, panel_get_child(app, split, Side_Max), Access_Always);
+    view_enqueue_command_function(app, g_qol_lister_view, qol_lister_spin);
+    view_set_setting(app, g_qol_lister_view, ViewSetting_ShowFileBar, false);
+    view_set_passive(app, g_qol_lister_view, true);
+  }
 }

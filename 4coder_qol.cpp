@@ -22,9 +22,6 @@ CUSTOM_ID(colors, defcolor_operator);
 
 #include "4coder_default_include.cpp"
 
-#include "4coder_qol_helper.h"
-#include "4coder_qol_block.cpp"
-
 #include "4coder_qol_jumps.cpp"
 
 global b32 qol_opened_brace = false;
@@ -41,8 +38,14 @@ global Face_ID qol_small_face;
 
 global Buffer_ID qol_temp_buffer;
 
+global u8 g_qol_bot_buffer[1024];
+global String_u8 g_qol_bot_string = Su8(g_qol_bot_buffer, 0, sizeof(g_qol_bot_buffer));
+
 global Character_Predicate character_predicate_word = {};
 global Character_Predicate character_predicate_non_word = {};
+
+#include "4coder_qol_helper.h"
+#include "4coder_qol_block.cpp"
 
 #include "4coder_qol_colors.cpp"
 #include "4coder_qol_token.cpp"
