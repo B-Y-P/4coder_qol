@@ -31,6 +31,8 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [17 - block functions and scope highlights](#c17)
 - [18 - custom lexer generator](#c18)
 - [19 - custom cpp token kinds](#c19)
+- [20 - enums are parsed and indexed](#c20)
+
 
 ---
 
@@ -232,6 +234,16 @@ For now, the tl;dr is "It's a DFA which is explicit on token emit, and has helpe
 ### 19 - custom cpp token kinds <a name="c19"/>
 Now that we can change how tokens get emmitted, we can also add the kinds of tokens we emit\
 So we can syntax highlight control flow, primitive types, and structural tokens differently
+
+</br>
+
+### 20 - enums are parsed and indexed <a name="c20"/>
+Alright, enough lexing for now. Instead, we can start parsing\
+Where lexing processed a stream of characters to produce tokens,\
+our parser processes a stream of tokens, and indexes tokens of interest\
+
+For our case, enum values are particularly helpful to index, since they often represent different options\
+So if a function is being passed an enum, jump to definition to switch to a different enum value is invaluable
 
 </br>
 
