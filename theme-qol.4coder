@@ -48,6 +48,7 @@ defcolor_line_numbers_text          =  0xFF487080;
 defcolor_function                   =  0xFF68B0F0;
 defcolor_type                       =  0xFF73BE9C;
 defcolor_macro                      =  0xFF926ACA;
+defcolor_enum                       =  0xFFDAAEFE;
 defcolor_primitive                  =  defcolor_type;
 defcolor_struct                     =  defcolor_keyword;
 defcolor_non_text                   =  0xFFA1A1D1;
