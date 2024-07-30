@@ -178,11 +178,12 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
     ARGB_Color cl_type  = fcolor_resolve(fcolor_id(defcolor_type));
     ARGB_Color cl_func  = fcolor_resolve(fcolor_id(defcolor_function));
     ARGB_Color cl_macro = fcolor_resolve(fcolor_id(defcolor_macro));
+    ARGB_Color cl_enum  = fcolor_resolve(fcolor_id(defcolor_enum));
 
     Token_Iterator_Array it = token_iterator_pos(0, &token_array, visible_range.first);
     for (;;){
       Token *token = token_it_read(&it);
-      Range_i64 tok_range = Ii64_size(token->pos, token->size);
+      Range_i64 tok_range = Ii64(token);
       if (token->pos > visible_range.max){ break; }
       String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, token);
       Code_Index_Note *note = code_index_note_from_string(lexeme);
@@ -195,6 +196,8 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
         paint_text_color(app, text_layout_id, tok_range, cl_func); break;
         case CodeIndexNote_Macro:
         paint_text_color(app, text_layout_id, tok_range, cl_macro); break;
+        case CodeIndexNote_Enum:
+        paint_text_color(app, text_layout_id, tok_range, cl_enum); break;
       }
     }
   }

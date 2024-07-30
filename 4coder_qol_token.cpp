@@ -1,4 +1,17 @@
 
+function b32
+qol_highlight_token(Token_Base_Kind kind){
+  switch(kind){
+    case TokenBaseKind_Keyword:
+    case TokenBaseKind_Identifier:
+    case qol_TokenKind_Primitive:
+    case qol_TokenKind_Control:
+    case qol_TokenKind_Struct:
+    return true;
+  }
+  return false;
+}
+
 function FColor
 qol_get_token_color_cpp(Token token){
   Managed_ID color = defcolor_text_default;
@@ -47,18 +60,12 @@ qol_get_token_color_cpp(Token token){
 function void
 qol_draw_cpp_token_colors(Application_Links *app, Text_Layout_ID text_layout_id, Token_Array *array){
   Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
-  i64 first_index = token_index_from_pos(array, visible_range.first);
-  Token_Iterator_Array it = token_iterator_index(0, array, first_index);
+  Token_Iterator_Array it = token_iterator_pos(0, array, visible_range.first);
   for (;;){
     Token *token = token_it_read(&it);
-    if (token->pos >= visible_range.one_past_last){
-      break;
-    }
+    if (token->pos > visible_range.max){ break; }
     FColor color = qol_get_token_color_cpp(*token);
-    ARGB_Color argb = fcolor_resolve(color);
-    paint_text_color(app, text_layout_id, Ii64_size(token->pos, token->size), argb);
-    if (!token_it_inc_all(&it)){
-      break;
-    }
+    paint_text_color(app, text_layout_id, Ii64(token), fcolor_resolve(color));
+    if(!token_it_inc_all(&it)){ break; }
   }
 }

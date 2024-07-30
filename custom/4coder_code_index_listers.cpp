@@ -25,7 +25,8 @@ lister_fill_index(Application_Links *app, Lister *lister){
 
         String_Const_u8 sort = (note->note_kind == CodeIndexNote_Type     ? string_u8_litexpr("type")     :
                                 note->note_kind == CodeIndexNote_Function ? string_u8_litexpr("function") :
-                                note->note_kind == CodeIndexNote_Macro    ? string_u8_litexpr("macro")    : string_u8_empty);
+                                note->note_kind == CodeIndexNote_Macro    ? string_u8_litexpr("macro")    :
+                                note->note_kind == CodeIndexNote_Enum     ? string_u8_litexpr("enum")     : string_u8_empty);
         lister_add_item(lister, note->text, sort, jump, 0);
       }
     }
