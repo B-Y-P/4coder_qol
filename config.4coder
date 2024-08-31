@@ -20,9 +20,11 @@ use_scope_highlight = true;
 use_paren_helper = true;
 use_comment_keyword = true;
 lister_whole_word_backspace_when_modified = true;
-show_line_number_margins = false;
+show_line_number_margins = true;
 enable_output_wrapping = false;
 highlight_line_at_cursor = true;
+
+filebar_on_top = false;
 
 enable_undo_fade_out = true;
 
