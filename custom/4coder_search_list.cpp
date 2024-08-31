@@ -30,21 +30,16 @@ def_search_list_add_system_path(Arena *arena, List_String_Const_u8 *list, System
 function String_Const_u8
 def_search_get_full_path(Arena *arena, List_String_Const_u8 *list, String_Const_u8 relative){
   String_Const_u8 result = {};
-
   Temp_Memory temp = begin_temp(arena);
-
-  u8 slash = '/';
 
   for (Node_String_Const_u8 *node = list->first;
        node != 0;
        node = node->next){
-    String_Const_u8 full_name = {};
-    full_name.size = node->string.size + 1 + relative.size;
-    full_name.str = push_array(arena, u8, full_name.size + 1);
-    block_copy(full_name.str, node->string.str, node->string.size);
-    full_name.str[node->string.size] = slash;
-    block_copy(full_name.str + node->string.size + 1, relative.str, relative.size);
-    full_name.str[full_name.size] = 0;
+    String_Const_u8 path = node->string;
+    b32 has_slash = character_is_slash(string_get_character(path, path.size - 1));
+    String_Const_u8 full_name = (has_slash ?
+                                 push_u8_stringf(arena, "%S%S", path, relative) :
+                                 push_u8_stringf(arena, "%S/%S", path, relative));
 
     File_Attributes attribs = system_quick_file_attributes(arena, full_name);
     if (attribs.last_write_time > 0){

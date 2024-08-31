@@ -16,8 +16,8 @@ CUSTOM_DOC("[QOL] Scrolls hovered view")
   View_ID active_view = get_active_view(app, Access_ReadVisible);
   if (mouse.wheel != 0){
     for (View_ID view = get_view_next(app, 0, Access_ReadVisible);
-        view != 0;
-        view = get_view_next(app, view, Access_ReadVisible)) {
+         view != 0;
+         view = get_view_next(app, view, Access_ReadVisible)) {
       Rect_f32 view_rect = view_get_screen_rect(app, view);
       if (rect_contains_point(view_rect, V2f32(mouse.p))){
         Buffer_Scroll scroll = view_get_buffer_scroll(app, view);
@@ -51,5 +51,21 @@ CUSTOM_DOC("[QOL] Scrolls hovered view")
   }
   if (mouse.l){
     no_mark_snap_to_cursor(app, active_view);
+  }
+}
+
+// TODO(BYP): Currently checks [prj dir, user dir, 4ed dir] in that order
+CUSTOM_COMMAND_SIG(qol_reload_config)
+CUSTOM_DOC("[QOL] Reloads the config.4coder file")
+{
+  Scratch_Block scratch(app);
+  View_ID view = get_active_view(app, Access_Always);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+  String_Const_u8 path = push_buffer_file_name(app, scratch, buffer);
+  String_Const_u8 file = string_front_of_path(path);
+  if (string_match(file, string_u8_litexpr("config.4coder"))){
+    Face_ID face = get_face_id(app, buffer);
+    Face_Description desc = get_face_description(app, face);
+    load_config_and_apply(app, &global_config_arena, desc.parameters.pt_size, desc.parameters.hinting);
   }
 }
