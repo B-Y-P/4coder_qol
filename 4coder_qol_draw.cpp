@@ -17,9 +17,12 @@ qol_render_caller(Application_Links *app, Frame_Info frame_info, View_ID view_id
   // NOTE(allen): file bar
   b64 showing_file_bar = false;
   if (view_get_setting(app, view_id, ViewSetting_ShowFileBar, &showing_file_bar) && showing_file_bar){
-    Rect_f32_Pair pair = layout_file_bar_on_bot(region, line_height);
-    draw_file_bar(app, view_id, buffer, face_id, pair.max);
-    region = pair.min;
+    b32 on_top = def_get_config_b32(vars_save_string_lit("filebar_on_top"));
+    Rect_f32_Pair pair = (on_top ?
+                          layout_file_bar_on_top(region, line_height) :
+                          layout_file_bar_on_bot(region, line_height));
+    draw_file_bar(app, view_id, buffer, face_id, pair.e[1-on_top]);
+    region = pair.e[on_top];
   }
 
   Buffer_Scroll scroll = view_get_buffer_scroll(app, view_id);
@@ -84,8 +87,11 @@ qol_buffer_region(Application_Links *app, View_ID view_id, Rect_f32 region){
   b64 showing_file_bar = false;
   if (view_get_setting(app, view_id, ViewSetting_ShowFileBar, &showing_file_bar) &&
       showing_file_bar){
-    Rect_f32_Pair pair = layout_file_bar_on_bot(region, line_height);
-    region = pair.min;
+    b32 on_top = def_get_config_b32(vars_save_string_lit("filebar_on_top"));
+    Rect_f32_Pair pair = (on_top ?
+                          layout_file_bar_on_top(region, line_height) :
+                          layout_file_bar_on_bot(region, line_height));
+    region = pair.e[on_top];
   }
 
   // NOTE(allen): query bars
