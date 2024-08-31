@@ -8,3 +8,19 @@ CUSTOM_DOC("[QOL] Seeks the cursor to the beginning of the visual line.")
 	scroll.target.pixel_shift.x = 0.f;
 	view_set_buffer_scroll(app, view, scroll, SetBufferScroll_NoCursorChange);
 }
+
+// TODO(BYP): Currently checks [prj dir, user dir, 4ed dir] in that order
+CUSTOM_COMMAND_SIG(qol_reload_config)
+CUSTOM_DOC("[QOL] Reloads the config.4coder file")
+{
+    Scratch_Block scratch(app);
+    View_ID view = get_active_view(app, Access_Always);
+	Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+    String_Const_u8 path = push_buffer_file_name(app, scratch, buffer);
+    String_Const_u8 file = string_front_of_path(path);
+    if (string_match(file, string_u8_litexpr("config.4coder"))){
+        Face_ID face = get_face_id(app, buffer);
+        Face_Description desc = get_face_description(app, face);
+        load_config_and_apply(app, &global_config_arena, desc.parameters.pt_size, desc.parameters.hinting);
+    }
+}
