@@ -27,6 +27,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [12 - hot reload project.4coder                 ](#c12)
 - [13 - comp errors for theme reloads             ](#c13)
 - [14 - hot reload bindings.4coder                ](#c14)
+- [15 - reloading helpers                         ](#c15)
 
 ---
 
@@ -177,6 +178,12 @@ So we'll quickly update our call to send a `comp_error` and be on our way
 
 ### 14 - hot reload bindings.4coder <a name="c14"/>
 You're not gonna *believe* what happens next...
+
+</br>
+
+### 15 - reloading helpers <a name="c15"/>
+If, *hypothetically*, someone had to frequently `git rebase`, 4coder would find a lot of externally modified files\
+Let's expedite the process a bit. We won't give keybinds here, since they're much *heftier* than the average command
 
 </br>
 
