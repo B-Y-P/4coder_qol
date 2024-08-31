@@ -1757,7 +1757,9 @@ CUSTOM_DOC("Reopen the current buffer from the hard drive.")
 {
   View_ID view = get_active_view(app, Access_ReadVisible);
   Buffer_ID buffer = view_get_buffer(app, view, Access_ReadVisible);
+  Buffer_Scroll scroll = view_get_buffer_scroll(app, view);
   buffer_reopen(app, buffer, 0);
+  view_set_buffer_scroll(app, view, scroll, SetBufferScroll_NoCursorChange);
 }
 
 ////////////////////////////////
