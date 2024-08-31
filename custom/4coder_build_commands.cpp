@@ -154,6 +154,15 @@ set_fancy_compilation_buffer_font(Application_Links *app){
   set_buffer_face_by_font_load_location(app, buffer, &font);
 }
 
+function void
+comp_error(Application_Links *app, String_Const_u8 error_text){
+  Buffer_ID buffer_comp = buffer_identifier_to_id_create_out_buffer(app, buffer_identifier(string_u8_litexpr("*compilation*")));
+  buffer_replace_range(app, buffer_comp, buffer_range(app, buffer_comp), error_text);
+  block_zero_struct(&prev_location);
+  lock_jump_buffer(app, buffer_comp);
+  get_or_make_list_for_buffer(app, &global_heap, buffer_comp);
+}
+
 CUSTOM_COMMAND_SIG(build_in_build_panel)
 CUSTOM_DOC("Looks for a build.bat, build.sh, or makefile in the current and parent directories.  Runs the first that it finds and prints the output to *compilation*.  Puts the *compilation* buffer in a panel at the footer of the current view.")
 {

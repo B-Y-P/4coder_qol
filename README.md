@@ -23,6 +23,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [08 - scroll margins                            ](#c08)
 - [09 - hot reload themes                         ](#c09)
 - [10 - interpolate theme                         ](#c10)
+- [11 - hot reload config.4coder                  ](#c11)
 
 ---
 
@@ -139,6 +140,21 @@ It'd be convenient to have a place to initialize the `cur_` and `nxt_` color tab
 Now we also have the added caveat that anyone can modify the table out from under us,\
 so we'll detect and intercept that on tick as well\
 Lastly, we can simplify our theme reloading now that we have a simpler way to re-target a parsed theme
+
+</br>
+
+### 11 - hot reload config.4coder <a name="c11"/>
+Now that we can [hot reload](#c07) our files, let's start applying it across the board\
+This time with `config.4coder` files. This time our call to `load_config_and_apply` uses C's `FILE*` API\
+This raises an issue as `qol_file_save` is called before the save is flushed\
+So instead of directly calling `qol_reload_config`, we'll use `view_enqueue_command_function`
+
+Unlike themes, it's much easier to hit a syntax error in the config files so let's look to resolve that\
+First, we include `.4coder` in the list of file extensions we parse and syntax highlight as C-like\
+Then we can re-use the way 4coder highlights compiler errors by adjusting the config error format to match\
+Now by outputting those errors to the `*compilation*` buffer, they'll show us exactly where the parser choked
+
+This also changes the default behavior to use the full path and avoid double-slashes e.g. `C:/4coder//config.4coder`
 
 </br>
 

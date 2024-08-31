@@ -35,6 +35,15 @@ def_search_normal_fopen(Arena *arena, char *file_name, char *opt){
   return(file);
 }
 
+function FILE*
+def_search_normal_fopen(Arena *arena, char *file_name, char *opt, String_Const_u8 *file_path){
+  String8List list = {};
+  def_search_normal_load_list(arena, &list);
+  *file_path = def_search_get_full_path(arena, &list, SCu8(file_name));
+  FILE *file = def_search_fopen(arena, &list, file_name, opt);
+  return(file);
+}
+
 ////////////////////////////////
 // NOTE(allen): Extension List
 
@@ -134,7 +143,7 @@ config_stringize_errors(Application_Links *app, Arena *arena, Config *parsed){
          error != 0;
          error = error->next){
       Error_Location location = get_error_location(app, parsed->data.str, error->pos);
-      string_list_pushf(arena, &list, "%S:%d:%d: %S\n",
+      string_list_pushf(arena, &list, "%S(%d,%d):  error %S\n",
                         error->file_name, location.line_number, location.column_number, error->text);
     }
     result = string_list_flatten(arena, list);
@@ -1539,6 +1548,8 @@ theme_parse__file_name(Application_Links *app, Arena *arena, char *file_name, Ar
 
 ////////////////////////////////
 
+function void lock_jump_buffer(Application_Links *app, Buffer_ID buffer_id);
+
 // TODO(allen): review this function
 function void
 load_config_and_apply(Application_Links *app, Arena *out_arena, i32 override_font_size, b32 override_hinting){
@@ -1547,18 +1558,21 @@ load_config_and_apply(Application_Links *app, Arena *out_arena, i32 override_fon
   linalloc_clear(out_arena);
 
   Config *parsed = 0;
-  FILE *file = def_search_normal_fopen(scratch, "config.4coder", "rb");
+  String_Const_u8 file_path = {};
+  FILE *file = def_search_normal_fopen(scratch, "config.4coder", "rb", &file_path);
   if (file != 0){
     String_Const_u8 data = dump_file_handle(scratch, file);
     fclose(file);
     if (data.str != 0){
-      parsed = def_config_from_text(app, scratch, str8_lit("config.4coder"), data);
+      parsed = def_config_from_text(app, scratch, file_path, data);
     }
   }
 
   if (parsed != 0){
     // Errors
     String_Const_u8 error_text = config_stringize_errors(app, scratch, parsed);
+    comp_error(app, error_text);
+
     if (error_text.str != 0){
       print_message(app, string_u8_litexpr("trying to load config file:\n"));
       print_message(app, error_text);

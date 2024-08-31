@@ -54,7 +54,7 @@ mark_thickness = 2;
 lister_roundness = 20;
 
 // Code Wrapping
-treat_as_code = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.m.mm";
+treat_as_code = ".cpp.c.hpp.h.cc.cs.java.rs.glsl.m.mm.4coder";
 enable_virtual_whitespace = true;
 virtual_whitespace_regular_indent = 2;
 enable_code_wrapping = false;

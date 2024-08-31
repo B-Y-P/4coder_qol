@@ -746,7 +746,8 @@ BUFFER_HOOK_SIG(default_begin_buffer){
             string_match(ext, string_u8_litexpr("h")) ||
             string_match(ext, string_u8_litexpr("c")) ||
             string_match(ext, string_u8_litexpr("hpp")) ||
-            string_match(ext, string_u8_litexpr("cc"))){
+            string_match(ext, string_u8_litexpr("cc")) ||
+            string_match(ext, string_u8_litexpr("4coder"))){
           treat_as_code = true;
         }
 
