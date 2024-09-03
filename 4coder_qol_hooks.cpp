@@ -60,19 +60,14 @@ BUFFER_HOOK_SIG(qol_file_save){
   String_Const_u8 path = push_buffer_file_name(app, scratch, buffer_id);
   String_Const_u8 name = string_front_of_path(path);
 
-  String_Const_u8 target_prefix = string_u8_litexpr("theme-");
-  String_Const_u8 target_suffix = string_u8_litexpr(".4coder");
-  String_Const_u8 actual_prefix = string_prefix(name, target_prefix.size);
-  String_Const_u8 actual_suffix = string_postfix(name, target_suffix.size);
-
-  if (string_match(actual_prefix, target_prefix) && string_match(actual_suffix, target_suffix)){
+  if (qol_is_theme_file(name)){
     Color_Table color_table = make_color_table(app, &global_theme_arena);
     Config *config = theme_parse__buffer(app, scratch, buffer_id, &global_theme_arena, &color_table);
     String_Const_u8 error_text = config_stringize_errors(app, scratch, config);
+    comp_error(app, error_text);
 
     if (error_text.size > 0){
       print_message(app, error_text);
-      printf_message(app, "There appears to be a problem parsing %S; no theme change applied\n", path);
     }
     else{
       qol_color_table_copy(qol_nxt_colors, color_table);
