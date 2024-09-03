@@ -5,6 +5,19 @@ open file, switch buffer, or kill buffer.
 
 // TOP
 
+typedef i32 Command_Lister_Status_Mode;
+enum{
+  CommandLister_None,
+  CommandLister_Descriptions,
+  CommandLister_Bindings
+};
+
+struct Command_Lister_Status_Rule{
+  Command_Lister_Status_Mode mode;
+  Mapping *mapping;
+  Command_Map_ID map_id;
+};
+
 function void
 generate_all_buffers_list__output_buffer(Application_Links *app, Lister *lister,
                                          Buffer_ID buffer){
@@ -21,9 +34,7 @@ generate_all_buffers_list__output_buffer(Application_Links *app, Lister *lister,
 }
 
 function void
-generate_all_buffers_list(Application_Links *app, Lister *lister){
-  lister_begin_new_item_set(app, lister);
-
+lister_fill_buffers(Application_Links *app, Lister *lister){
   Buffer_ID viewed_buffers[16];
   i32 viewed_buffer_count = 0;
 
@@ -77,10 +88,76 @@ generate_all_buffers_list(Application_Links *app, Lister *lister){
   }
 }
 
+function void
+lister_fill_commands(Application_Links *app, Lister *lister, Command_Lister_Status_Rule *status_rule){
+  for (i32 i = 0; i < command_one_past_last_id; i += 1){
+    Custom_Command_Function *proc = fcoder_metacmd_table[i].proc;
+    String_Const_u8 status = {};
+    switch (status_rule->mode){
+      case CommandLister_Descriptions:
+      {
+        status = SCu8(fcoder_metacmd_table[i].description);
+      }break;
+      case CommandLister_Bindings:
+      {
+        Command_Trigger_List triggers = map_get_triggers_recursive(lister->arena, status_rule->mapping, status_rule->map_id, proc);
+
+        List_String_Const_u8 list = {};
+        for (Command_Trigger *node = triggers.first;
+             node != 0;
+             node = node->next){
+          command_trigger_stringize(lister->arena, &list, node);
+          if (node->next != 0){
+            string_list_push(lister->arena, &list, string_u8_litexpr(" "));
+          }
+        }
+
+        status = string_list_flatten(lister->arena, list);
+      }break;
+    }
+
+    lister_add_item(lister, SCu8(fcoder_metacmd_table[i].name), status, (void*)proc, 0);
+  }
+}
+
+function void
+lister_fill_themes(Application_Links *app, Lister *lister){
+  lister_add_item(lister, string_u8_litexpr("4coder"), string_u8_empty, (void*)&default_color_table, 0);
+
+  for (Color_Table_Node *node = global_theme_list.first;
+       node != 0;
+       node = node->next){
+    lister_add_item(lister, node->name, string_u8_empty, (void*)&node->table, 0);
+  }
+}
+
+function void
+lister_fill_prj_cmd(Application_Links *app, Lister *lister, Variable_Handle prj_var){
+  Variable_Handle cmd_list_var = vars_read_key(prj_var, vars_save_string_lit("commands"));
+  String_ID os_id = vars_save_string_lit(OS_NAME);
+
+  for (Variable_Handle cmd = vars_first_child(cmd_list_var);
+       !vars_is_nil(cmd);
+       cmd = vars_next_sibling(cmd)){
+    Variable_Handle os_cmd = vars_read_key(cmd, os_id);
+    if (!vars_is_nil(os_cmd)){
+      String8 cmd_name = vars_key_from_var(lister->arena, cmd);
+      String8 os_cmd_str = vars_string_from_var(lister->arena, os_cmd);
+      lister_add_item(lister, cmd_name, os_cmd_str, cmd.ptr, 0);
+    }
+  }
+}
+
+function void
+lister_refill_buffers(Application_Links *app, Lister *lister){
+  lister_begin_new_item_set(app, lister);
+  lister_fill_buffers(app, lister);
+}
+
 function Buffer_ID
 get_buffer_from_user(Application_Links *app, String_Const_u8 query){
   Lister_Handlers handlers = lister_get_default_handlers();
-  handlers.refresh = generate_all_buffers_list;
+  handlers.refresh = lister_refill_buffers;
   Lister_Result l_result = run_lister_with_refresh_handler(app, query, handlers);
   Buffer_ID result = 0;
   if (!l_result.canceled){
@@ -95,19 +172,6 @@ get_buffer_from_user(Application_Links *app, char *query){
 }
 
 ////////////////////////////////
-
-typedef i32 Command_Lister_Status_Mode;
-enum{
-  CommandLister_None,
-  CommandLister_Descriptions,
-  CommandLister_Bindings
-};
-
-struct Command_Lister_Status_Rule{
-  Command_Lister_Status_Mode mode;
-  Mapping *mapping;
-  Command_Map_ID map_id;
-};
 
 function Command_Lister_Status_Rule
 command_lister_status_descriptions(void){
@@ -126,51 +190,13 @@ command_lister_status_bindings(Mapping *mapping, Command_Map_ID map_id){
 }
 
 function Custom_Command_Function*
-get_command_from_user(Application_Links *app, String_Const_u8 query, i32 *command_ids, i32 command_id_count, Command_Lister_Status_Rule *status_rule){
-  if (command_ids == 0){
-    command_id_count = command_one_past_last_id;
-  }
-
+get_command_from_user(Application_Links *app, String_Const_u8 query, Command_Lister_Status_Rule *status_rule){
   Scratch_Block scratch(app);
   Lister_Block lister(app, scratch);
   lister_set_query(lister, query);
   lister_set_default_handlers(lister);
 
-  for (i32 i = 0; i < command_id_count; i += 1){
-    i32 j = i;
-    if (command_ids != 0){
-      j = command_ids[i];
-    }
-    j = clamp(0, j, command_one_past_last_id);
-
-    Custom_Command_Function *proc = fcoder_metacmd_table[j].proc;
-    String_Const_u8 status = {};
-    switch (status_rule->mode){
-      case CommandLister_Descriptions:
-      {
-        status = SCu8(fcoder_metacmd_table[j].description);
-      }break;
-      case CommandLister_Bindings:
-      {
-        Command_Trigger_List triggers = map_get_triggers_recursive(scratch, status_rule->mapping, status_rule->map_id, proc);
-
-        List_String_Const_u8 list = {};
-        for (Command_Trigger *node = triggers.first;
-             node != 0;
-             node = node->next){
-          command_trigger_stringize(scratch, &list, node);
-          if (node->next != 0){
-            string_list_push(scratch, &list, string_u8_litexpr(" "));
-          }
-        }
-
-        status = string_list_flatten(scratch, list);
-      }break;
-    }
-
-    lister_add_item(lister, SCu8(fcoder_metacmd_table[j].name), status,
-                    (void*)proc, 0);
-  }
+  lister_fill_commands(app, lister, status_rule);
 
   Lister_Result l_result = run_lister(app, lister);
 
@@ -181,44 +207,16 @@ get_command_from_user(Application_Links *app, String_Const_u8 query, i32 *comman
   return(result);
 }
 
-function Custom_Command_Function*
-get_command_from_user(Application_Links *app, String_Const_u8 query, Command_Lister_Status_Rule *status_rule){
-  return(get_command_from_user(app, query, 0, 0, status_rule));
-}
-
-function Custom_Command_Function*
-get_command_from_user(Application_Links *app, char *query,
-                      i32 *command_ids, i32 command_id_count, Command_Lister_Status_Rule *status_rule){
-  return(get_command_from_user(app, SCu8(query), command_ids, command_id_count, status_rule));
-}
-
-function Custom_Command_Function*
-get_command_from_user(Application_Links *app, char *query, Command_Lister_Status_Rule *status_rule){
-  return(get_command_from_user(app, SCu8(query), 0, 0, status_rule));
-}
-
 ////////////////////////////////
 
 function Color_Table*
-get_color_table_from_user(Application_Links *app, String_Const_u8 query, Color_Table_List *color_table_list){
-  if (color_table_list == 0){
-    color_table_list = &global_theme_list;
-  }
-
+get_color_table_from_user(Application_Links *app, String_Const_u8 query){
   Scratch_Block scratch(app);
   Lister_Block lister(app, scratch);
   lister_set_query(lister, query);
   lister_set_default_handlers(lister);
 
-  lister_add_item(lister, string_u8_litexpr("4coder"), string_u8_litexpr(""),
-                  (void*)&default_color_table, 0);
-
-  for (Color_Table_Node *node = color_table_list->first;
-       node != 0;
-       node = node->next){
-    lister_add_item(lister, node->name, string_u8_litexpr(""),
-                    (void*)&node->table, 0);
-  }
+  lister_fill_themes(app, lister);
 
   Lister_Result l_result = run_lister(app, lister);
 
@@ -231,7 +229,7 @@ get_color_table_from_user(Application_Links *app, String_Const_u8 query, Color_T
 
 function Color_Table*
 get_color_table_from_user(Application_Links *app){
-  return(get_color_table_from_user(app, string_u8_litexpr("Theme:"), 0));
+  return(get_color_table_from_user(app, string_u8_litexpr("Theme:")));
 }
 
 ////////////////////////////////
@@ -769,7 +767,7 @@ CUSTOM_DOC("Opens an interactive list of all registered commands.")
     else{
       rule = command_lister_status_descriptions();
     }
-    Custom_Command_Function *func = get_command_from_user(app, "Command:", &rule);
+    Custom_Command_Function *func = get_command_from_user(app, string_u8_litexpr("Command:"), &rule);
     if (func != 0){
       view_enqueue_command_function(app, view, func);
     }

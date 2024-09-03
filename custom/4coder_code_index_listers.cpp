@@ -9,16 +9,8 @@ struct Tiny_Jump{
   i64 pos;
 };
 
-CUSTOM_UI_COMMAND_SIG(jump_to_definition)
-CUSTOM_DOC("List all definitions in the code index and jump to one chosen by the user.")
-{
-  char *query = "Definition:";
-
-  Scratch_Block scratch(app);
-  Lister_Block lister(app, scratch);
-  lister_set_query(lister, query);
-  lister_set_default_handlers(lister);
-
+function void
+lister_fill_index(Application_Links *app, Lister *lister){
   code_index_lock();
   for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
        buffer != 0;
@@ -27,30 +19,29 @@ CUSTOM_DOC("List all definitions in the code index and jump to one chosen by the
     if (file != 0){
       for (i32 i = 0; i < file->note_array.count; i += 1){
         Code_Index_Note *note = file->note_array.ptrs[i];
-        Tiny_Jump *jump = push_array(scratch, Tiny_Jump, 1);
+        Tiny_Jump *jump = push_array(lister->arena, Tiny_Jump, 1);
         jump->buffer = buffer;
         jump->pos = note->pos.first;
 
-        String_Const_u8 sort = {};
-        switch (note->note_kind){
-          case CodeIndexNote_Type:
-          {
-            sort = string_u8_litexpr("type");
-          }break;
-          case CodeIndexNote_Function:
-          {
-            sort = string_u8_litexpr("function");
-          }break;
-          case CodeIndexNote_Macro:
-          {
-            sort = string_u8_litexpr("macro");
-          }break;
-        }
+        String_Const_u8 sort = (note->note_kind == CodeIndexNote_Type     ? string_u8_litexpr("type")     :
+                                note->note_kind == CodeIndexNote_Function ? string_u8_litexpr("function") :
+                                note->note_kind == CodeIndexNote_Macro    ? string_u8_litexpr("macro")    : string_u8_empty);
         lister_add_item(lister, note->text, sort, jump, 0);
       }
     }
   }
   code_index_unlock();
+}
+
+CUSTOM_UI_COMMAND_SIG(jump_to_definition)
+CUSTOM_DOC("List all definitions in the code index and jump to one chosen by the user.")
+{
+  Scratch_Block scratch(app);
+  Lister_Block lister(app, scratch);
+  lister_set_query(lister, string_u8_litexpr("Definition:"));
+  lister_set_default_handlers(lister);
+
+  lister_fill_index(app, lister);
 
   Lister_Result l_result = run_lister(app, lister);
   Tiny_Jump result = {};
