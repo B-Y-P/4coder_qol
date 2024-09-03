@@ -22,6 +22,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [08 - interpolate theme](#c08)
 - [09 - hot reload config.4coder](#c09)
 - [10 - hot reload project.4coder](#c10)
+- [11 - comp errors for theme reloads](#c11)
 
 
 ---
@@ -156,6 +157,11 @@ Since this is becoming a pattern, we can hoist `comp_error` as a function to re-
 We now find ourselves with the issue that by default, `load_project` does project parsing *and* directory loading\
 By splitting these, we can keep simply reparse on file-save
 
+</br>
+
+### 11 - comp errors for theme reloads <a name="c11"/>
+While `project.4coder` and `config.4coder` both got to make use of `comp_error` our theme parsing doesn't\
+So we'll quickly update our call to send a `comp_error` and be on our way
 
 </br>
 
