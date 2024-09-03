@@ -1,4 +1,13 @@
 
+function bool
+qol_is_theme_file(String_Const_u8 name){
+  String_Const_u8 target_prefix = string_u8_litexpr("theme-");
+  String_Const_u8 target_suffix = string_u8_litexpr(".4coder");
+  String_Const_u8 actual_prefix = string_prefix(name, target_prefix.size);
+  String_Const_u8 actual_suffix = string_postfix(name, target_suffix.size);
+  return string_match(actual_prefix, target_prefix) && string_match(actual_suffix, target_suffix);
+}
+
 function Color_Table
 qol_color_table_init(Application_Links *app){
   Color_Table table = make_color_table(app, &global_permanent_arena);
