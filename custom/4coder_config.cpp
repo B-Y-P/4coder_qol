@@ -1548,8 +1548,6 @@ theme_parse__file_name(Application_Links *app, Arena *arena, char *file_name, Ar
 
 ////////////////////////////////
 
-function void lock_jump_buffer(Application_Links *app, Buffer_ID buffer_id);
-
 // TODO(allen): review this function
 function void
 load_config_and_apply(Application_Links *app, Arena *out_arena, i32 override_font_size, b32 override_hinting){
