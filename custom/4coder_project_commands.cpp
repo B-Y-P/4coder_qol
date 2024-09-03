@@ -794,19 +794,7 @@ prj_cmd_from_user(Application_Links *app, Variable_Handle prj_var, String8 query
   lister_set_query(lister, query);
   lister_set_default_handlers(lister);
 
-  Variable_Handle cmd_list_var = vars_read_key(prj_var, vars_save_string_lit("commands"));
-  String_ID os_id = vars_save_string_lit(OS_NAME);
-
-  for (Variable_Handle cmd = vars_first_child(cmd_list_var);
-       !vars_is_nil(cmd);
-       cmd = vars_next_sibling(cmd)){
-    Variable_Handle os_cmd = vars_read_key(cmd, os_id);
-    if (!vars_is_nil(os_cmd)){
-      String8 cmd_name = vars_key_from_var(scratch, cmd);
-      String8 os_cmd_str = vars_string_from_var(scratch, os_cmd);
-      lister_add_item(lister, cmd_name, os_cmd_str, cmd.ptr, 0);
-    }
-  }
+  lister_fill_prj_cmd(app, lister, prj_var);
 
   Variable_Handle result = vars_get_nil();
   Lister_Result l_result = run_lister(app, lister);
