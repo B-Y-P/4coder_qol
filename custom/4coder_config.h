@@ -52,6 +52,7 @@ enum{
   ConfigRValueType_LValue,
   ConfigRValueType_Boolean,
   ConfigRValueType_Integer,
+  ConfigRValueType_Float,
   ConfigRValueType_String,
   ConfigRValueType_Compound,
   ConfigRValueType_COUNT
@@ -64,12 +65,14 @@ struct Config_Compound{
 };
 
 struct Config_RValue{
+  Range_i64 range;
   Config_RValue_Type type;
   union{
     Config_LValue *lvalue;
     b32 boolean;
     i32 integer;
     u32 uinteger;
+    f32 fnumber;
     String_Const_u8 string;
     char character;
     Config_Compound *compound;
@@ -89,6 +92,7 @@ enum{
   ConfigLayoutType_Unset,
   ConfigLayoutType_Identifier,
   ConfigLayoutType_Integer,
+  ConfigLayoutType_Float,
   ConfigLayoutType_COUNT,
 };
 struct Config_Layout{
@@ -97,6 +101,7 @@ struct Config_Layout{
   union{
     String_Const_u8 identifier;
     i32 integer;
+    f32 fnumber;
   };
 };
 
@@ -149,6 +154,7 @@ struct Config_Get_Result{
     b32 boolean;
     i32 integer;
     u32 uinteger;
+    f32 fnumber;
     String_Const_u8 string;
     char character;
     Config_Compound *compound;
@@ -198,6 +204,7 @@ function b32 def_config_parser_match_text(Config_Parser *ctx, String_Const_u8 te
 
 function String_Const_u8 def_config_parser_get_lexeme(Config_Parser *ctx);
 function Config_Integer  def_config_parser_get_int(Config_Parser *ctx);
+function f32             def_config_parser_get_float(Config_Parser *ctx);
 function b32             def_config_parser_get_boolean(Config_Parser *ctx);
 
 function void def_config_parser_recover(Config_Parser *ctx);
