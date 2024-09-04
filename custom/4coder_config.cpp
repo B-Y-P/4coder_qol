@@ -264,6 +264,21 @@ def_config_parser_get_int(Config_Parser *ctx){
   return(config_integer);
 }
 
+function f32
+string_to_float(String_Const_u8 string){
+  if(string.str == NULL){ return -0.f; }
+  char* end;
+  f32 result = strtof((char*)string.str, &end);
+  return end != NULL ? result : -0.f;
+}
+
+function f32
+def_config_parser_get_float(Config_Parser *ctx){
+  String_Const_u8 str = def_config_parser_get_lexeme(ctx);
+  f32 result = string_to_float(str);
+  return(result);
+}
+
 function b32
 def_config_parser_get_boolean(Config_Parser *ctx){
   String_Const_u8 str = def_config_parser_get_lexeme(ctx);
@@ -399,6 +414,7 @@ def_config_parser_lvalue(Config_Parser *ctx){
 function Config_RValue*
 def_config_parser_rvalue(Config_Parser *ctx){
   Config_RValue *rvalue = 0;
+  i64 pos = ctx->token->pos;
   if (def_config_parser_recognize_cpp_kind(ctx, TokenCppKind_Identifier)){
     Config_LValue *l = def_config_parser_lvalue(ctx);
     require(l != 0);
@@ -433,6 +449,13 @@ def_config_parser_rvalue(Config_Parser *ctx){
       rvalue->uinteger = value.uinteger;
     }
   }
+  else if (def_config_parser_recognize_base_kind(ctx, TokenBaseKind_LiteralFloat)){
+    f32 value = def_config_parser_get_float(ctx);
+    def_config_parser_inc(ctx);
+    rvalue = push_array_zero(ctx->arena, Config_RValue, 1);
+    rvalue->type = ConfigRValueType_Float;
+    rvalue->fnumber = value;
+  }
   else if (def_config_parser_recognize_cpp_kind(ctx, TokenCppKind_LiteralString)){
     String_Const_u8 s = def_config_parser_get_lexeme(ctx);
     def_config_parser_inc(ctx);
@@ -442,6 +465,11 @@ def_config_parser_rvalue(Config_Parser *ctx){
     rvalue->type = ConfigRValueType_String;
     rvalue->string = interpreted;
   }
+
+  if (rvalue){
+    rvalue->range = Ii64(pos, ctx->token->pos);
+  }
+
   return(rvalue);
 }
 
@@ -507,6 +535,11 @@ def_config_parser_element(Config_Parser *ctx){
       layout.type = ConfigLayoutType_Integer;
       Config_Integer value = def_config_parser_get_int(ctx);
       layout.integer = value.integer;
+      def_config_parser_inc(ctx);
+    }
+    else if (def_config_parser_recognize_base_kind(ctx, TokenBaseKind_LiteralFloat)){
+      layout.type = ConfigLayoutType_Float;
+      layout.fnumber = def_config_parser_get_float(ctx);
       def_config_parser_inc(ctx);
     }
     else{
@@ -601,6 +634,7 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
 
   b32 *boolean = 0;
   i32 *integer = 0;
+  f32 *fnumber = 0;
   String_Const_u8 *string = 0;
   Config_Compound *compound = 0;
 
@@ -622,6 +656,11 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
             case ConfigRValueType_Integer:
             {
               integer = &get_result.integer;
+            }break;
+
+            case ConfigRValueType_Float:
+            {
+              fnumber = &get_result.fnumber;
             }break;
 
             case ConfigRValueType_String:
@@ -648,6 +687,11 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
       integer = &r->integer;
     }break;
 
+    case ConfigRValueType_Float:
+    {
+      fnumber = &r->fnumber;
+    }break;
+
     case ConfigRValueType_String:
     {
       string = &r->string;
@@ -672,6 +716,10 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
   else if (integer != 0){
     // TODO(allen): signed/unsigned problem
     String_ID val = vars_save_string(push_stringf(scratch, "%d", *integer));
+    vars_new_variable(dst, l_value, val);
+  }
+  else if (fnumber != 0){
+    String_ID val = vars_save_string(push_stringf(scratch, "%f", *fnumber));
     vars_new_variable(dst, l_value, val);
   }
   else if (string != 0){
@@ -710,6 +758,12 @@ def_var_dump_rvalue(Application_Links *app, Config *config, Variable_Handle dst,
         {
           implicit_allowed = false;
           sub_l_value = vars_save_string(push_stringf(scratch, "%d", node->l.integer));
+        }break;
+
+        case ConfigLayoutType_Float:
+        {
+          implicit_allowed = false;
+          sub_l_value = vars_save_string(push_stringf(scratch, "%f", node->l.fnumber));
         }break;
       }
 
@@ -854,6 +908,14 @@ def_set_config_u64(Application_Links *app, String_ID key, u64 val){
   def_set_config_var(key, vars_save_string(val_string));
 }
 
+function f32
+def_get_config_f32(Application_Links *app, String_ID key){
+  Scratch_Block scratch(app);
+  Variable_Handle var = def_get_config_var(key);
+  f32 result = vars_f32_from_var(app, var);
+  return(result);
+}
+
 
 ////////////////////////////////
 // NOTE(allen): Eval
@@ -895,6 +957,11 @@ config_evaluate_rvalue(Config *config, Config_Assignment *assignment, Config_RVa
         case ConfigRValueType_Integer:
         {
           result.integer = r->integer;
+        }break;
+
+        case ConfigRValueType_Float:
+        {
+          result.fnumber = r->fnumber;
         }break;
 
         case ConfigRValueType_String:
@@ -1042,6 +1109,16 @@ config_uint_var(Config *config, String_Const_u8 var_name, i32 subscript, u32* va
 function b32
 config_uint_var(Config *config, char *var_name, i32 subscript, u32* var_out){
   return(config_uint_var(config, SCu8(var_name), subscript, var_out));
+}
+
+function b32
+config_f32_var(Config *config, String_Const_u8 var_name, i32 subscript, f32* var_out){
+  Config_Get_Result result = config_var(config, var_name, subscript);
+  b32 success = result.success && result.type == ConfigRValueType_Float;
+  if (success){
+    *var_out = result.fnumber;
+  }
+  return(success);
 }
 
 function b32

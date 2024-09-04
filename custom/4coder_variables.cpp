@@ -178,6 +178,16 @@ vars_u64_from_var(Application_Links *app, Variable_Handle var){
   return(result);
 }
 
+function f32
+vars_f32_from_var(Application_Links *app, Variable_Handle var){
+  Scratch_Block scratch(app);
+  String_ID val = vars_string_id_from_var(var);
+  String_Const_u8 string = vars_read_string(scratch, val);
+  string = push_string_copy(scratch, string);
+  f32 result = string_to_float(string);
+  return(result);
+}
+
 function Variable_Handle
 vars_read_key(Variable_Handle var, String_ID key){
   Variable_Handle result = vars_get_nil();

@@ -56,6 +56,7 @@ function String8         vars_key_from_var(Arena *arena, Variable_Handle var);
 function String_ID       vars_string_id_from_var(Variable_Handle var);
 function String8         vars_string_from_var(Arena *arena, Variable_Handle var);
 function b32             vars_b32_from_var(Variable_Handle var);
+function f32             vars_f32_from_var(Application_Links *app, Variable_Handle var);
 function u64             vars_u64_from_var(Application_Links *app, Variable_Handle var);
 
 function void            vars_set_string(Variable_Handle var, String_ID string);
