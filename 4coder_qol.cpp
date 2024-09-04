@@ -20,6 +20,10 @@ global Color_Table qol_cur_colors;
 global Color_Table qol_nxt_colors;
 
 #include "4coder_qol_colors.cpp"
+
+function void qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id);
+function void qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id);
+
 #include "4coder_qol_commands.cpp"
 #include "4coder_qol_draw.cpp"
 #include "4coder_qol_bindings.cpp"
