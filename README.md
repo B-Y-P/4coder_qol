@@ -26,6 +26,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [11 - hot reload config.4coder                  ](#c11)
 - [12 - hot reload project.4coder                 ](#c12)
 - [13 - comp errors for theme reloads             ](#c13)
+- [14 - hot reload bindings.4coder                ](#c14)
 
 ---
 
@@ -171,6 +172,11 @@ By splitting these, we can keep simply reparse on file-save
 ### 13 - comp errors for theme reloads <a name="c13"/>
 While `project.4coder` and `config.4coder` both got to make use of `comp_error` our theme parsing doesn't\
 So we'll quickly update our call to send a `comp_error` and be on our way
+
+</br>
+
+### 14 - hot reload bindings.4coder <a name="c14"/>
+You're not gonna *believe* what happens next...
 
 </br>
 
