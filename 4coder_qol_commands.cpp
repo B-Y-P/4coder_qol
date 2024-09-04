@@ -83,3 +83,20 @@ CUSTOM_DOC("[QOL] Reloads the project.4coder file")
     parse_project(app, scratch, dump);
   }
 }
+
+CUSTOM_COMMAND_SIG(qol_reload_bindings)
+CUSTOM_DOC("[QOL] Reloads the bindings.4coder file")
+{
+  Scratch_Block scratch(app);
+  View_ID view = get_active_view(app, Access_Always);
+  Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
+  String_Const_u8 path = push_buffer_file_name(app, scratch, buffer);
+  String_Const_u8 file = string_front_of_path(path);
+  b32 is_bindings = string_match(file, string_u8_litexpr("bindings.4coder"));
+  if (is_bindings && dynamic_binding_load_from_path(app, scratch, &framework_mapping, path)){
+    String_ID global_map_id = vars_save_string_lit("keys_global");
+    String_ID file_map_id = vars_save_string_lit("keys_file");
+    String_ID code_map_id = vars_save_string_lit("keys_code");
+    qol_setup_essential_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+  }
+}
