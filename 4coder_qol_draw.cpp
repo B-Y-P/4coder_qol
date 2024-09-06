@@ -199,6 +199,8 @@ qol_draw_cursor_mark(Application_Links *app, View_ID view_id, b32 is_active_view
       }
     }
   }
+
+  MC_render_cursors(app, view_id, text_layout_id);
 }
 
 function void
