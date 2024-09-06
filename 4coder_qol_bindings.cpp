@@ -21,7 +21,7 @@ qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 co
 
 	SelectMap(code_id);
 	ParentMap(file_id);
-	BindTextInput(qol_write_text_and_auto_indent);
+	MC_BindTextInput(qol_write_text_and_auto_indent);
 }
 
 function void
@@ -82,7 +82,7 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
 	Bind(move_left,              KeyCode_Left);
 	Bind(move_right,             KeyCode_Right);
 	Bind(seek_end_of_line,       KeyCode_End);
-	Bind(qol_home,               KeyCode_Home);
+	MC_Bind(qol_home,               KeyCode_Home);
 	Bind(page_up,                KeyCode_PageUp);
 	Bind(page_down,              KeyCode_PageDown);
 	Bind(goto_beginning_of_file, KeyCode_PageUp, KeyCode_Control);
@@ -91,10 +91,10 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
 	Bind(move_down_to_blank_line_end,      KeyCode_Down, KeyCode_Control);
 	Bind(qol_find_divider_up,              KeyCode_Up, KeyCode_Control, KeyCode_Shift);
 	Bind(qol_find_divider_down,            KeyCode_Down, KeyCode_Control, KeyCode_Shift);
-	Bind(qol_ctrl_forwards,          KeyCode_Right, KeyCode_Control);
-	Bind(qol_ctrl_backwards,         KeyCode_Left, KeyCode_Control);
-	Bind(qol_ctrl_delete,            KeyCode_Delete, KeyCode_Control);
-	Bind(qol_ctrl_backspace,         KeyCode_Backspace, KeyCode_Control);
+	MC_Bind(qol_ctrl_forwards,          KeyCode_Right, KeyCode_Control);
+	MC_Bind(qol_ctrl_backwards,         KeyCode_Left, KeyCode_Control);
+	MC_Bind(qol_ctrl_delete,            KeyCode_Delete, KeyCode_Control);
+	MC_Bind(qol_ctrl_backspace,         KeyCode_Backspace, KeyCode_Control);
 	Bind(snipe_backward_whitespace_or_token_boundary, KeyCode_Backspace, KeyCode_Alt);
 	Bind(snipe_forward_whitespace_or_token_boundary,  KeyCode_Delete, KeyCode_Alt);
 	Bind(set_mark,                    KeyCode_Space, KeyCode_Control);
@@ -131,10 +131,10 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
 	Bind(if_read_only_goto_position_same_panel, KeyCode_Return, KeyCode_Shift);
 	Bind(view_jump_list_with_lister,  KeyCode_Period, KeyCode_Control, KeyCode_Shift);
 	Bind(qol_column_toggle,           KeyCode_BackwardSlash, KeyCode_Control, KeyCode_Shift);
-	Bind(qol_write_space,             KeyCode_Space);
-	Bind(qol_write_space,             KeyCode_Space, KeyCode_Shift);
-	Bind(qol_char_forward,            KeyCode_Right, KeyCode_Shift);
-	Bind(qol_char_backward,           KeyCode_Left, KeyCode_Shift);
+	MC_Bind(qol_write_space,             KeyCode_Space);
+	MC_Bind(qol_write_space,             KeyCode_Space, KeyCode_Shift);
+	MC_Bind(qol_char_forward,            KeyCode_Right, KeyCode_Shift);
+	MC_Bind(qol_char_backward,           KeyCode_Left, KeyCode_Shift);
 	Bind(qol_move_selection_up,       KeyCode_Up, KeyCode_Alt);
 	Bind(qol_move_selection_down,     KeyCode_Down, KeyCode_Alt);
 

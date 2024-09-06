@@ -153,6 +153,8 @@ qol_draw_cursor_mark(Application_Links *app, View_ID view_id, b32 is_active_view
 		draw_character_wire_frame(app, text_layout_id, mark_pos, roundness, outline_thickness, fcolor_id(defcolor_mark));
 		draw_rectangle(app, cur_cursor_rect, roundness, cl_cursor);
 	}
+
+	MC_render_cursors(app, view_id, text_layout_id);
 }
 
 function void

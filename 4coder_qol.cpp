@@ -20,6 +20,8 @@ CUSTOM_ID(colors, defcolor_primitive);
 CUSTOM_ID(colors, defcolor_struct);
 CUSTOM_ID(colors, defcolor_non_text);
 
+#include "plugins/4coder_multi_cursor.cpp"
+
 global b32 qol_opened_brace = false;
 global u8 qol_target_char;
 global Buffer_Cursor qol_col_cursor = {-1};
@@ -66,6 +68,8 @@ void custom_layer_init(Application_Links *app){
 
     default_framework_init(app);
 
+	MC_init(app);
+
 	// Set up custom layer hooks
 	{
 		set_custom_hook(app, HookID_BufferViewerUpdate, default_view_adjust);
@@ -85,7 +89,7 @@ void custom_layer_init(Application_Links *app){
 		set_custom_hook(app, HookID_EndBuffer, end_buffer_close_jump_list);
 		set_custom_hook(app, HookID_NewFile, default_new_file);
 		set_custom_hook(app, HookID_SaveFile, qol_file_save);
-		set_custom_hook(app, HookID_BufferEditRange, default_buffer_edit_range);
+		set_custom_hook(app, HookID_BufferEditRange, MC_buffer_edit_range);
 		set_custom_hook(app, HookID_BufferRegion, qol_buffer_region);
 		set_custom_hook(app, HookID_ViewChangeBuffer, default_view_change_buffer);
 
@@ -97,4 +101,15 @@ void custom_layer_init(Application_Links *app){
 	String_ID file_map_id = vars_save_string_lit("keys_file");
 	String_ID code_map_id = vars_save_string_lit("keys_code");
 	qol_setup_essential_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+
+	MC_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+
+	MC_register(exit_4coder,                  MC_Command_Global);
+	MC_register(default_try_exit,             MC_Command_Global);
+	MC_register(mouse_wheel_change_face_size, MC_Command_Global);
+	MC_register(swap_panels,                  MC_Command_Global);
+
+	MC_register(copy,             MC_Command_CursorCopy);
+	MC_register(cut,              MC_Command_CursorCopy);
+	MC_register(paste_and_indent, MC_Command_CursorPaste);
 }

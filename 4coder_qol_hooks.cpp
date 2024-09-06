@@ -73,6 +73,8 @@ qol_tick(Application_Links *app, Frame_Info frame_info){
 	qol_tick_colors(app, frame_info);
 
 	qol_tick_lister(app, frame_info);
+
+	MC_tick_inner(app, frame_info);
 }
 
 BUFFER_HOOK_SIG(qol_file_save){

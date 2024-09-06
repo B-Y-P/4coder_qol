@@ -6,6 +6,11 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 `cd 4coder_qol`\
 `build release`
 
+Note: `bindings.4coder` will overwrite default keybinds\
+(in case you have your own custom layer and bindings and are just testing 4coder_qol)
+
+### Still WIP
+
 ---
 
 ### Table of Contents
@@ -47,6 +52,18 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [33 - lister multi-column grid](#c33)
 - [34 - lister bot view](#c34)
 - [35 - isearch ctrl-backspace](#c35)
+
+---
+
+### Plugins
+
+- [x] [multi-cursors](#p1)
+- [ ] tab-sessions
+- [ ] quick-lister
+- [ ] folds
+- [ ] miller-collumns
+- [ ] regex
+- [ ] git
 
 ---
 
@@ -390,4 +407,12 @@ you just gotta fix it wherever you can, even if it takes 250 loc to do so
 ### decouple lister fill from lister run
 - this will come in handy waaaay later down the line
 
+---
+
+## Plugins
+
+### multi-cursors <a name="p1">
+While still rough around the edges and WIP, it more than serves as a proof of concept\
+The more fundamental issue this runs into is from 4coder using a gap buffer as its underlying data structure\
+For multi-cursors to be fully feasible, it would require changes to the core to use ropes which is well out of scope for qol
 
