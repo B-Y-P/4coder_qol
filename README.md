@@ -57,6 +57,18 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 
 ---
 
+### Plugins
+
+- [x] [multi-cursors](#p1)
+- [ ] tab-sessions
+- [ ] miller-collumns
+- [ ] quick-lister
+- [ ] folds
+- [ ] regex
+- [ ] git
+
+---
+
 </br>
 
 ### 00 - add custom render hook <a name="c00"/>
@@ -440,3 +452,12 @@ and jump-lists require a view in order for jump to next/prev in list to function
 
 ### decouple lister fill from lister run
 - this will come in handy waaaay later down the line
+
+---
+
+## Plugins
+
+### multi-cursors <a name="p1">
+While still rough around the edges and WIP, it more than serves as a proof of concept\
+The more fundamental issue this runs into is from 4coder using a gap buffer as its underlying data structure\
+For multi-cursors to be fully feasible, it would require changes to the core to use ropes which is well out of scope for qol

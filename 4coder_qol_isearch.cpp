@@ -91,7 +91,7 @@ qol_isearch(Application_Links *app, Scan_Direction scan, i64 first_pos, String_C
           change_scan = (f == qol_search ? Scan_Forward : Scan_Backward);
           do_scan_action = true;
         }
-        else if (f == qol_write_space || f == paste || f == paste_and_indent){
+        else if (f == qol_write_space || MCi_kind(f) == MC_Command_CursorPaste){
           String_u8 bar_string = Su8(bar.string, sizeof(bar_string_space));
           String_Const_u8 append = (f==qol_write_space ? string_u8_litexpr(" ") : get_clipboard_index(&clipboard0, 0));
           string_append(&bar_string, append);
@@ -104,7 +104,9 @@ qol_isearch(Application_Links *app, Scan_Direction scan, i64 first_pos, String_C
             view_enqueue_command_function(app, view, f);
             break;
           }
-          //f(app);
+          if (MCi_kind(f) == MC_Command_Global){
+            f(app);
+          }
         }
         else {
           leave_current_input_unhandled(app);
