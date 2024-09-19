@@ -3,6 +3,7 @@ project_name = "4coder QOL";
 
 indent_with_tabs = false;
 indent_width = 2;
+session_file = ".session.4coder";
 
 patterns = {
   "*.c",

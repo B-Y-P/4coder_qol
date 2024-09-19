@@ -666,7 +666,7 @@ qol_draw_peek(Application_Links *app, Frame_Info frame_info){
     default: return;
   }
 
-  Rect_f32 region = global_get_screen_rectangle(app);
+  Rect_f32 region = panel_get_rect(app, TAB_root(app));
   Vec2_f32 center = rect_center(region);
   Vec2_f32 dim = rect_half_dim(region);
   Vec2_f32 bound = V2f32(lerp(rect_x(region), 0.4f),  // x bias since text is left-to-right

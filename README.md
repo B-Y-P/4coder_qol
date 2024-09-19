@@ -60,7 +60,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 ### Plugins
 
 - [x] [multi-cursors](#p1)
-- [ ] tab-sessions
+- [x] [tab-sessions](#p2)
 - [ ] miller-collumns
 - [ ] quick-lister
 - [ ] folds
@@ -461,3 +461,11 @@ and jump-lists require a view in order for jump to next/prev in list to function
 While still rough around the edges and WIP, it more than serves as a proof of concept\
 The more fundamental issue this runs into is from 4coder using a gap buffer as its underlying data structure\
 For multi-cursors to be fully feasible, it would require changes to the core to use ropes which is well out of scope for qol
+
+### tab-sessions <a name="p2">
+This implements tabs which save and restore the full panel layout, and sessions which serialize and de-serialize the tabs\
+A lot of effort went into making this as simple and robust as possible, especially compared to my first attempt over a year ago\
+The key idea was storing and operating on a flat array rather than a recursive binary tree\
+When the data can be stored in a flat array, it makes saving to a `.4coder` file *much* easier\
+Using a text file also has the benefit of demonstrating there's "nothing up my sleeve" compared to an opaque binary blob\
+And by having `session_file` specified per-project and opt-in, it avoids needlessly creating files every time you open/close the editor
