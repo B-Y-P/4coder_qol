@@ -15,6 +15,7 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     String_ID file_map_id = vars_save_string_lit("keys_file");
     String_ID code_map_id = vars_save_string_lit("keys_code");
     qol_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
+    TAB_setup_default_mapping(&framework_mapping, global_map_id, file_map_id, code_map_id);
 
     b32 auto_load = def_get_config_b32(vars_save_string_lit("automatically_load_project"));
     if (auto_load){
@@ -28,6 +29,7 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_ReadOnly, false);
     qol_snippet_init(app);
 
+    TAB_startup_inner(app);
     qol_bview_init(app);
   }
 
@@ -72,6 +74,7 @@ qol_tick(Application_Links *app, Frame_Info frame_info){
   qol_tick_bview(app, frame_info);
 
   MC_tick_inner(app, frame_info);
+  TAB_tick_inner(app, frame_info);
 }
 
 BUFFER_HOOK_SIG(qol_file_save){

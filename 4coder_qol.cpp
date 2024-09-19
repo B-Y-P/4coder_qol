@@ -26,6 +26,7 @@ CUSTOM_ID(colors, defcolor_operator);
 #include "4coder_qol_jumps.cpp"
 
 #include "plugins/4coder_multi_cursor.cpp"
+#include "plugins/4coder_tabs.cpp"
 
 global b32 qol_opened_brace = false;
 global u8 qol_target_char;
