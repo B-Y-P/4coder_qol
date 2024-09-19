@@ -227,9 +227,12 @@ CUSTOM_DOC("Sets the cursor position and mark to the mouse position.")
 {
   View_ID view = get_active_view(app, Access_ReadVisible);
   Mouse_State mouse = get_mouse_state(app);
-  i64 pos = view_pos_from_xy(app, view, V2f32(mouse.p));
-  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
-  view_set_mark(app, view, seek_pos(pos));
+  Rect_f32 rect = view_get_screen_rect(app, view);
+  if (rect_contains_point(rect, V2f32(mouse.p))){
+    i64 pos = view_pos_from_xy(app, view, V2f32(mouse.p));
+    view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
+    view_set_mark(app, view, seek_pos(pos));
+  }
 }
 
 CUSTOM_COMMAND_SIG(click_set_cursor)
@@ -237,9 +240,12 @@ CUSTOM_DOC("Sets the cursor position to the mouse position.")
 {
   View_ID view = get_active_view(app, Access_ReadVisible);
   Mouse_State mouse = get_mouse_state(app);
-  i64 pos = view_pos_from_xy(app, view, V2f32(mouse.p));
-  view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
-  no_mark_snap_to_cursor(app, view);
+  Rect_f32 rect = view_get_screen_rect(app, view);
+  if (rect_contains_point(rect, V2f32(mouse.p))){
+    i64 pos = view_pos_from_xy(app, view, V2f32(mouse.p));
+    view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
+    no_mark_snap_to_cursor(app, view);
+  }
 }
 
 CUSTOM_COMMAND_SIG(click_set_cursor_if_lbutton)
@@ -247,7 +253,8 @@ CUSTOM_DOC("If the mouse left button is pressed, sets the cursor position to the
 {
   View_ID view = get_active_view(app, Access_ReadVisible);
   Mouse_State mouse = get_mouse_state(app);
-  if (mouse.l){
+  Rect_f32 rect = view_get_screen_rect(app, view);
+  if (mouse.l && rect_contains_point(rect, V2f32(mouse.p))){
     i64 pos = view_pos_from_xy(app, view, V2f32(mouse.p));
     view_set_cursor_and_preferred_x(app, view, seek_pos(pos));
   }
