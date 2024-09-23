@@ -27,6 +27,9 @@ highlight_line_at_cursor = true;
 filebar_on_top = false;
 show_hex_colors = true;
 
+scroll_margin_x = 1.f;
+scroll_margin_y = 2.f;
+
 enable_undo_fade_out = true;
 
 // cursor_roundess is a value [0,50] setting the radius of

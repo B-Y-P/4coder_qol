@@ -218,6 +218,7 @@ qol_render_caller(Application_Links *app, Frame_Info frame_info, View_ID view_id
 	Face_ID face_id = get_face_id(app, buffer);
 	Face_Metrics face_metrics = get_face_metrics(app, face_id);
 	f32 line_height = face_metrics.line_height;
+	f32 normal_advance = face_metrics.normal_advance;
 	f32 digit_advance = face_metrics.decimal_digit_advance;
 
 	// NOTE(allen): file bar
@@ -230,6 +231,11 @@ qol_render_caller(Application_Links *app, Frame_Info frame_info, View_ID view_id
 		draw_file_bar(app, view_id, buffer, face_id, pair.e[1-on_top]);
         region = pair.e[on_top];
     }
+
+	f32 char_count = def_get_config_f32(app, vars_save_string_lit("scroll_margin_x"));
+	f32 line_count = def_get_config_f32(app, vars_save_string_lit("scroll_margin_y"));
+	Vec2_f32 margin = V2f32(char_count*normal_advance, line_count*line_height);
+	view_set_camera_bounds(app, view_id, margin, V2f32(1,1));
 
 	Buffer_Scroll scroll = view_get_buffer_scroll(app, view_id);
 
