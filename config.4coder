@@ -34,6 +34,9 @@ show_hex_colors = true;
 cursor_style = "";
 mark_style   = "L";
 
+scroll_margin_x = 1.f;
+scroll_margin_y = 2.f;
+
 enable_undo_fade_out = true;
 
 // cursor_roundess is a value [0,50] setting the radius of
