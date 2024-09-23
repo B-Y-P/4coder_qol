@@ -21,6 +21,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [05 - hex colors                                ](#c05)
 - [06 - code index syntax highlighting            ](#c06)
 - [07 - home scrolls view left                    ](#c07)
+- [08 - scroll margins                            ](#c08)
 
 ---
 
@@ -114,6 +115,13 @@ This is fine vertically, but when I hit the `<home>` key I want to scroll all th
 Same idea for the metadata generator when using `CUSTOM_COMMAND_SIG` and `CUSTOM_DOC`\
 We can add our `qol_home` command to our `bindings.4coder`\
 In case the user is missing this file, we can provide `qol_setup_default_mapping` at init
+
+</br>
+
+### 08 - scroll margins <a name="c08"/>
+While the default behavior of scrolling once the cursor goes out of view is fine,\
+it's common to allow the user to define some margin to start scrolling sooner\
+So we'll add `scroll_margin_x` and `scroll_margin_y` in 'char-count' and 'line-count' resp.
 
 </br>
 
