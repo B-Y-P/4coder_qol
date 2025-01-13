@@ -32,6 +32,7 @@
 
 #include "4coder_token.h"
 #include "generated/lexer_cpp.h"
+#include "generated/lexer_odin.h"
 
 #include "4coder_variables.h"
 #include "4coder_audio.h"

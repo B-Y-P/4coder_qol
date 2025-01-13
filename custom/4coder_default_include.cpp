@@ -39,6 +39,7 @@
 #include "4coder_command_map.cpp"
 
 #include "generated/lexer_cpp.cpp"
+#include "generated/lexer_odin.cpp"
 
 #include "4coder_default_map.cpp"
 #include "4coder_mac_map.cpp"

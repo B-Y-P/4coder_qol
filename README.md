@@ -11,6 +11,9 @@ Note: `bindings.4coder` will overwrite default keybinds\
 
 ### Still WIP
 
+This branch has some basic odin stuff\
+Problem is... I don't code in odin, so YMMV for actual odin usage :)
+
 ---
 
 ### Table of Contents

@@ -147,6 +147,7 @@ enum{
   ActionKind_DelimMarkOnePastLast,
   ActionKind_Consume,
   ActionKind_Emit,
+  ActionKind_Custom,
 };
 
 struct Action{
@@ -159,6 +160,7 @@ struct Action{
       b32 value;
     } set_flag;
     Emit_Rule *emit_rule;
+    String_Const_u8 custom;
   };
 };
 
@@ -295,6 +297,9 @@ struct Lexer_Model{
   State *root;
   Flag_Set flags;
   State_Set states;
+
+  Node_String_Const_u8 *custom_decls;
+  Node_String_Const_u8 *custom_init;
 };
 
 struct Lexer_Primary_Context{
@@ -527,46 +532,36 @@ smi_emit_handler_delim(Arena *arena, Emit_Rule *rule, Keyword_Set *set, Flag *fl
   return(handler);
 }
 
-internal void
-smi_append_set_flag(Arena *arena, Action_List *list, Flag *flag, b32 value){
+internal Action*
+smi_append_flag_action(Arena *arena, Action_List *list, Action_Kind kind){
   Action *action = push_array_zero(arena, Action, 1);
   zdll_push_back(list->first, list->last, action);
   list->count += 1;
-  action->kind = ActionKind_SetFlag;
+  action->kind = kind;
+  return action;
+}
+
+internal void smi_append_set_flag                 (Arena *arena, Action_List *list, Flag *flag, b32 value);
+internal void smi_append_zero_flags               (Arena *arena, Action_List *list);
+internal void smi_append_delim_mark_first         (Arena *arena, Action_List *list);
+internal void smi_append_delim_mark_one_past_last (Arena *arena, Action_List *list);
+internal void smi_append_consume                  (Arena *arena, Action_List *list);
+
+internal void
+smi_append_set_flag(Arena *arena, Action_List *list, Flag *flag, b32 value){
+  Action *action = smi_append_flag_action(arena, list, ActionKind_SetFlag);
   action->set_flag.flag = flag;
   action->set_flag.value = value;
 }
 
-internal void
-smi_append_zero_flags(Arena *arena, Action_List *list){
-  Action *action = push_array_zero(arena, Action, 1);
-  zdll_push_back(list->first, list->last, action);
-  list->count += 1;
-  action->kind = ActionKind_ZeroFlags;
-}
+internal void smi_append_zero_flags               (Arena *arena, Action_List *list){ smi_append_flag_action(arena, list, ActionKind_ZeroFlags);            }
+internal void smi_append_delim_mark_first         (Arena *arena, Action_List *list){ smi_append_flag_action(arena, list, ActionKind_DelimMarkFirst);       }
+internal void smi_append_delim_mark_one_past_last (Arena *arena, Action_List *list){ smi_append_flag_action(arena, list, ActionKind_DelimMarkOnePastLast); }
+internal void smi_append_consume                  (Arena *arena, Action_List *list){ smi_append_flag_action(arena, list, ActionKind_Consume);              }
 
-internal void
-smi_append_delim_mark_first(Arena *arena, Action_List *list){
-  Action *action = push_array_zero(arena, Action, 1);
-  zdll_push_back(list->first, list->last, action);
-  list->count += 1;
-  action->kind = ActionKind_DelimMarkFirst;
-}
-
-internal void
-smi_append_delim_mark_one_past_last(Arena *arena, Action_List *list){
-  Action *action = push_array_zero(arena, Action, 1);
-  zdll_push_back(list->first, list->last, action);
-  list->count += 1;
-  action->kind = ActionKind_DelimMarkOnePastLast;
-}
-
-internal void
-smi_append_consume(Arena *arena, Action_List *list){
-  Action *action = push_array_zero(arena, Action, 1);
-  zdll_push_back(list->first, list->last, action);
-  list->count += 1;
-  action->kind = ActionKind_Consume;
+internal void smi_append_custom(Arena *arena, Action_List *list, String_Const_u8 custom){
+  Action* action = smi_append_flag_action(arena, list, ActionKind_Custom);
+  action->custom = custom;
 }
 
 internal void
@@ -1601,6 +1596,33 @@ sm_delim_mark_one_past_last(void){
   smi_append_delim_mark_one_past_last(helper_ctx.arena, &state->on_entry_actions);
 }
 
+internal void
+sm_custom(String_Const_u8 custom){
+  State *state = helper_ctx.selected_state;
+  smi_append_custom(helper_ctx.arena, &state->on_entry_actions, custom);
+}
+
+internal void
+sm_on_transition_custom(String_Const_u8 custom){
+  Transition *transition = helper_ctx.selected_transition;
+  smi_append_custom(helper_ctx.arena, &transition->activation_actions, custom);
+}
+
+internal void
+sm_custom_decl(String_Const_u8 custom){
+  Node_String_Const_u8 *node = push_array_zero(helper_ctx.arena, Node_String_Const_u8, 1);
+  node->string = custom;
+  sll_stack_push(helper_ctx.primary_ctx.model.custom_decls, node);
+}
+
+internal void
+sm_custom_init(String_Const_u8 custom){
+  Node_String_Const_u8 *node = push_array_zero(helper_ctx.arena, Node_String_Const_u8, 1);
+  node->string = custom;
+  sll_stack_push(helper_ctx.primary_ctx.model.custom_init, node);
+}
+
+
 ////////////////////////////////
 
 // NOTE(allen): OPERATORS FOR COMPOSING MODEL COMPONENTS AS EXPRESSIONS
@@ -1750,7 +1772,7 @@ smo_op_set_lexer_root(Operator_Set *set, State *machine_root, String_Const_u8 fa
   Base_Allocator *allocator = helper_ctx.primary_ctx.allocator;
   Table_Data_u64 string_to_state = make_table_Data_u64(allocator, set->count*8);
 
-  State *root = sm_add_state("op root");
+  State *root = sm_add_state("op_root");
 
   for (Operator *node = set->first;
        node != 0;
@@ -2102,6 +2124,10 @@ opt_copy_model(Arena *arena, Lexer_Model model){
     }
   }
   Assert(result.root);
+
+  result.custom_decls = model.custom_decls;
+  result.custom_init = model.custom_init;
+
   return(result);
 }
 
@@ -3107,6 +3133,11 @@ debug_print_transitions(Arena *scratch, Lexer_Model model){
           {
             printf("\t\tEmit\n");
           }break;
+
+          case ActionKind_Custom:
+          {
+            printf("\t\tCustom: `%.*s`\n", string_expand(act->custom));
+          }break;
         }
       }
       printf("\t\tGo to %.*s;\n", string_expand(trans->dst_state->pretty_name));
@@ -3152,8 +3183,7 @@ internal void
 gen_tokens(Arena *scratch, Token_Kind_Set tokens, FILE *out){
   Temp_Memory temp = begin_temp(scratch);
   i32 counter = 0;
-  fprintf(out, "typedef u16 Token_" LANG_NAME_CAMEL_STR "_Kind;\n");
-  fprintf(out, "enum{\n");
+  fprintf(out, "enum Token_" LANG_NAME_CAMEL_STR "_Kind : i16 {\n");
   for (Token_Kind_Node *node = tokens.first;
        node != 0;
        node = node->next){
@@ -3164,6 +3194,7 @@ gen_tokens(Arena *scratch, Token_Kind_Set tokens, FILE *out){
   char *full_name = gen_token_full_name(scratch, SCu8("COUNT"));
   fprintf(out, "%s = %d,\n", full_name, counter);
   fprintf(out, "};\n");
+  fprintf(out, "\n");
   fprintf(out, "char *token_" LANG_NAME_LOWER_STR "_kind_names[] = {\n");
   for (Token_Kind_Node *node = tokens.first;
        node != 0;
@@ -3293,6 +3324,9 @@ gen_goto_state__cont_flow(State *state, Action_Context context, FILE *out){
     {
       fprintf(out, "goto state_label_%d; // %.*s\n",
               state->number, string_expand(state->pretty_name));
+
+      //fprintf(out, "goto state_label_%.*s;\n",
+      //        string_expand(state->pretty_name));
     }break;
     case ActionContext_EndOfFile:
     {
@@ -3379,6 +3413,11 @@ gen_SLOW_action_list__cont_flow(Arena *scratch, Token_Kind_Set tokens, Flag_Set 
        action != 0;
        action = action->next){
     switch (action->kind){
+      case ActionKind_Custom:
+      {
+        fprintf(out, "%.*s\n", string_expand(action->custom));
+      }break;
+
       case ActionKind_SetFlag:
       {
         gen_action__set_flag(action->set_flag.flag, action->set_flag.value, out);
@@ -3700,7 +3739,14 @@ gen_contiguous_control_flow_lexer(Arena *scratch, Token_Kind_Set tokens, Lexer_M
   fprintf(out, "u8 *emit_ptr;\n");
   fprintf(out, "u8 *ptr;\n");
   fprintf(out, "u8 *opl_ptr;\n");
-  fprintf(out, "};\n");
+
+  for (Node_String_Const_u8 *node = model.custom_decls;
+       node != 0;
+       node = node->next){
+    fprintf(out, "%.*s\n", string_expand(node->string));
+  }
+
+  fprintf(out, "};\n\n");
 
   fprintf(out, "internal void\n");
   fprintf(out, "lex_full_input_" LANG_NAME_LOWER_STR "_init(Lex_State_"
@@ -3716,7 +3762,14 @@ gen_contiguous_control_flow_lexer(Arena *scratch, Token_Kind_Set tokens, Lexer_M
   fprintf(out, "state_ptr->emit_ptr = input.str;\n");
   fprintf(out, "state_ptr->ptr = input.str;\n");
   fprintf(out, "state_ptr->opl_ptr = input.str + input.size;\n");
-  fprintf(out, "}\n");
+
+  for (Node_String_Const_u8 *node = model.custom_init;
+       node != 0;
+       node = node->next){
+    fprintf(out, "%.*s\n", string_expand(node->string));
+  }
+
+  fprintf(out, "}\n\n");
 
   fprintf(out, "internal b32\n");
   fprintf(out, "lex_full_input_" LANG_NAME_LOWER_STR "_breaks("
@@ -3732,6 +3785,9 @@ gen_contiguous_control_flow_lexer(Arena *scratch, Token_Kind_Set tokens, Lexer_M
     fprintf(out, "{\n");
     fprintf(out, "state_label_%d: // %.*s\n",
             state->number, string_expand(state->pretty_name));
+
+    //fprintf(out, "state_label_%.*s:\n",
+    //        string_expand(state->pretty_name));
 
     Transition_List *transitions = &state->transitions;
     Transition *trans = transitions->first;
@@ -4020,6 +4076,7 @@ int main(void){
 
   fprintf(out_h_file, "%s\n", hand_written_h.str);
   gen_tokens(&ctx->arena, ctx->tokens, out_h_file);
+  fflush(out_h_file);
 
   fprintf(out_cpp_file, "%s\n", hand_written.str);
   for (Keyword_Set *set = ctx->keywords.first;
@@ -4028,6 +4085,7 @@ int main(void){
     gen_keyword_table(&ctx->arena, ctx->tokens, *set, out_cpp_file);
   }
   gen_contiguous_control_flow_lexer(&ctx->arena, ctx->tokens, ctx->model, out_cpp_file);
+  fflush(out_cpp_file);
 
   fclose(out_h_file);
   fclose(out_cpp_file);

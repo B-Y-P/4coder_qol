@@ -397,13 +397,14 @@ cpp_parse_type_structure(Code_Index_File *index, Generic_Parse_State *state, Cod
 }
 
 function void
-cpp_parse_scan_comma(Code_Index_File *index, Generic_Parse_State *state){
+generic_parse_scan_comma(Code_Index_File *index, Generic_Parse_State *state){
   for (;;){
     generic_parse_skip_soft_tokens(index, state);
     Token *token = token_it_read(&state->it);
+
     if (token == 0 || state->finished){ break; }
 
-    if (token->sub_kind == TokenCppKind_Comma){
+    if (string_match(string_substring(state->contents, Ii64(token)), str8_lit(","))){
       generic_parse_inc(state);
       break;
     }
@@ -455,7 +456,7 @@ cpp_parse_enum_list(Code_Index_File *index, Generic_Parse_State *state, Code_Ind
     if (token->kind == TokenBaseKind_Identifier){
       index_new_note(index, state, Ii64(token), CodeIndexNote_Enum, parent);
       generic_parse_inc(state);
-      cpp_parse_scan_comma(index, state);
+      generic_parse_scan_comma(index, state);
       continue;
     }
 

@@ -3,10 +3,13 @@
 
 //#define SNIPPET_EXPANSION "path/to/snippet.inc"
 
-//#define AUTO_CENTER_AFTER_JUMPS true
+#define AUTO_CENTER_AFTER_JUMPS false
 
 #include "4coder_qol_token.h"
 #include "4coder_qol_lister.h"
+
+#include "4coder_qol_lang.h"
+
 #define run_lister qol_run_lister
 
 CUSTOM_ID(colors, defcolor_type);
@@ -19,7 +22,12 @@ CUSTOM_ID(colors, defcolor_primitive);
 CUSTOM_ID(colors, defcolor_struct);
 CUSTOM_ID(colors, defcolor_non_text);
 
+CUSTOM_ID(attachment, buffer_language)
+
 #include "4coder_default_include.cpp"
+
+#include "4coder_qol_lang.cpp"
+#include "4coder_qol_odin_parser.cpp"
 
 #include "plugins/4coder_tabs.cpp"
 #include "plugins/4coder_multi_cursor.cpp"
@@ -101,11 +109,11 @@ void custom_layer_init(Application_Links *app){
 
     set_custom_hook(app, HookID_BufferNameResolver, default_buffer_name_resolution);
 
-    set_custom_hook(app, HookID_BeginBuffer, default_begin_buffer);
+    set_custom_hook(app, HookID_BeginBuffer, qol_begin_buffer);
     set_custom_hook(app, HookID_EndBuffer, end_buffer_close_jump_list);
     set_custom_hook(app, HookID_NewFile, default_new_file);
     set_custom_hook(app, HookID_SaveFile, qol_file_save);
-    set_custom_hook(app, HookID_BufferEditRange, MC_buffer_edit_range);
+    set_custom_hook(app, HookID_BufferEditRange, qol_buffer_edit_range);
     set_custom_hook(app, HookID_BufferRegion, qol_buffer_region);
     set_custom_hook(app, HookID_ViewChangeBuffer, default_view_change_buffer);
 

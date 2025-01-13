@@ -57,8 +57,46 @@ qol_get_token_color_cpp(Token token){
   return fcolor_id(color);
 }
 
+function FColor
+qol_get_token_color_odin(Token token){
+  Managed_ID color = defcolor_text_default;
+  switch (token.kind){
+    case TokenBaseKind_Preprocessor:   { color = defcolor_preproc;        }break;
+    case TokenBaseKind_Keyword:        { color = defcolor_keyword;        }break;
+    case TokenBaseKind_Comment:        { color = defcolor_comment;        }break;
+    case TokenBaseKind_LiteralString:  { color = defcolor_str_constant;   }break;
+    case TokenBaseKind_LiteralInteger: { color = defcolor_int_constant;   }break;
+    case TokenBaseKind_LiteralFloat:   { color = defcolor_float_constant; }break;
+
+    case TokenBaseKind_Operator:
+    case TokenBaseKind_ScopeOpen:
+    case TokenBaseKind_ScopeClose:
+    case TokenBaseKind_ParentheticalOpen:
+    case TokenBaseKind_ParentheticalClose:
+    case TokenBaseKind_StatementClose:{ color = defcolor_non_text; } break;
+
+    case qol_TokenKind_Control:{ color = defcolor_control; }break;
+    case qol_TokenKind_Primitive:{ color = defcolor_primitive; }break;
+    case qol_TokenKind_Struct:{ color = defcolor_struct; }break;
+  }
+  // specifics override generals
+  switch (token.sub_kind){
+    case TokenOdinKind_Directive: { color = defcolor_macro; }break;
+    case TokenOdinKind_Parametric: { color = defcolor_non_text; }break;
+    case TokenOdinKind_LiteralCharacter: { color = defcolor_char_constant; }break;
+  }
+  return fcolor_id(color);
+}
+
+function FColor
+qol_get_token_color(Token token, Buffer_Lang lang){
+  return (lang == Lang_Odin ?
+          qol_get_token_color_odin(token) :
+          qol_get_token_color_cpp(token));
+}
+
 function void
-qol_draw_cpp_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Layout_ID text_layout_id, Token_Array *array){
+qol_draw_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer, Text_Layout_ID text_layout_id, Token_Array *array, Buffer_Lang lang){
   Scratch_Block scratch(app);
   Token *cursor_token = token_from_pos(array, view_get_cursor_pos(app, view));
   b32 do_highlight_cur_token = qol_highlight_token(cursor_token->kind);
@@ -69,7 +107,7 @@ qol_draw_cpp_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer
   ARGB_Color cl_global = fcolor_resolve(fcolor_id(defcolor_global));
   ARGB_Color cl_enum   = fcolor_resolve(fcolor_id(defcolor_enum));
   ARGB_Color cl_back   = fcolor_resolve(fcolor_id(defcolor_back));
-  ARGB_Color cur_tok_color = fcolor_resolve(qol_get_token_color_cpp(*cursor_token));
+  ARGB_Color cur_tok_color = fcolor_resolve(qol_get_token_color(*cursor_token, lang));
 
   if (cursor_token->kind == TokenBaseKind_Identifier){
     String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, cursor_token);
@@ -77,11 +115,11 @@ qol_draw_cpp_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer
 
     if (note != 0){
       switch (note->note_kind){
-        case CodeIndexNote_Function: cur_tok_color = cl_func;   break;
-        case CodeIndexNote_Type:     cur_tok_color = cl_type;   break;
-        case CodeIndexNote_Macro:    cur_tok_color = cl_macro;  break;
+        case CodeIndexNote_Function: cur_tok_color = cl_func;  break;
+        case CodeIndexNote_Type:     cur_tok_color = cl_type;  break;
+        case CodeIndexNote_Macro:    cur_tok_color = cl_macro; break;
         case CodeIndexNote_Global:   cur_tok_color = cl_global; break;
-        case CodeIndexNote_Enum:     cur_tok_color = cl_enum;   break;
+        case CodeIndexNote_Enum:     cur_tok_color = cl_enum;  break;
       }
     }
   }
@@ -96,7 +134,7 @@ qol_draw_cpp_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer
   for (;;){
     Token *token = token_it_read(&it);
     if (token->pos >= visible_range.max){ break; }
-    ARGB_Color argb = fcolor_resolve(qol_get_token_color_cpp(*token));
+    ARGB_Color argb = fcolor_resolve(qol_get_token_color(*token, lang));
     String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, token);
     Code_Index_Note *note = code_index_note_from_string(lexeme);
 

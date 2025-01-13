@@ -13,8 +13,7 @@ struct Lexeme_Table_Lookup{
 };
 
 #endif
-typedef u16 Token_Cpp_Kind;
-enum{
+enum Token_Cpp_Kind : i16 {
   TokenCppKind_EOF = 0,
   TokenCppKind_Whitespace = 1,
   TokenCppKind_LexError = 2,
@@ -197,6 +196,7 @@ enum{
   TokenCppKind_PPDefined = 179,
   TokenCppKind_COUNT = 180,
 };
+
 char *token_cpp_kind_names[] = {
   "EOF",
   "Whitespace",

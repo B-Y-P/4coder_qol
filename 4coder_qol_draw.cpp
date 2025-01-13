@@ -356,7 +356,9 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   // NOTE(allen): Token colorizing
   Token_Array token_array = get_token_array_from_buffer(app, buffer);
   if (token_array.tokens != 0){
-    qol_draw_cpp_token_colors(app, view_id, buffer, text_layout_id, &token_array);
+    Managed_Scope scope = buffer_get_managed_scope(app, buffer);
+    Buffer_Lang language = *scope_attachment(app, scope, buffer_language, Buffer_Lang);
+    qol_draw_token_colors(app, view_id, buffer, text_layout_id, &token_array, language);
 
     // NOTE(allen): Scan for TODOs and NOTEs
     b32 use_comment_keyword = def_get_config_b32(vars_save_string_lit("use_comment_keyword"));

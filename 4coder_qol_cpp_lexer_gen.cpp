@@ -302,6 +302,7 @@ build_language_model(void){
   AddState(fnumber_exponent);
   AddState(fnumber_exponent_sign);
   AddState(fnumber_exponent_digits);
+  // TODO: hex digit sequence float 0x1.0p-24f
 
   AddState(number_hex_first);
   AddState(number_hex);
