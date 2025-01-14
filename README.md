@@ -28,6 +28,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [13 - comp errors for theme reloads             ](#c13)
 - [14 - hot reload bindings.4coder                ](#c14)
 - [15 - reloading helpers                         ](#c15)
+- [16 - loc command                               ](#c16)
 
 ---
 
@@ -184,6 +185,13 @@ You're not gonna *believe* what happens next...
 ### 15 - reloading helpers <a name="c15"/>
 If, *hypothetically*, someone had to frequently `git rebase`, 4coder would find a lot of externally modified files\
 Let's expedite the process a bit. We won't give keybinds here, since they're much *heftier* than the average command
+
+</br>
+
+### 16 - loc command <a name="c16"/>
+While we're iterating all buffers, might as well do something useful.\
+We'll use filter by buffers with code mappings as a proxy for "significant"\
+We can also take advantage of `stb_sprintf`'s handy comma separator specifier
 
 </br>
 

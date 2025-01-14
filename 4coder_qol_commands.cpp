@@ -144,3 +144,20 @@ CUSTOM_DOC("[QOL] Auto-indent and remove blank lines for all loaded buffers")
   }
   save_all_dirty_buffers(app);
 }
+
+CUSTOM_COMMAND_SIG(qol_loc)
+CUSTOM_DOC("[QOL] Prints Lines of Code")
+{
+  i64 loc = 0;
+  Command_Map_ID code_map_id = vars_save_string_lit("keys_code");
+  for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Read);
+       buffer != 0;
+       buffer = get_buffer_next(app, buffer, Access_Read)){
+    Managed_Scope scope = buffer_get_managed_scope(app, buffer);
+    Command_Map_ID *map_id_ptr = scope_attachment(app, scope, buffer_map_id, Command_Map_ID);
+    if (map_id_ptr != 0 && *map_id_ptr == code_map_id){
+      loc += buffer_get_line_count(app, buffer);
+    }
+  }
+  printf_message(app, "LOC: %'lld lines\n", loc);
+}
