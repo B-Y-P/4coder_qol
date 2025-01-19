@@ -175,10 +175,11 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
       draw_comment_highlights(app, buffer, text_layout_id, &token_array, pairs, ArrayCount(pairs));
     }
     Scratch_Block scratch(app);
-    ARGB_Color cl_type  = fcolor_resolve(fcolor_id(defcolor_type));
-    ARGB_Color cl_func  = fcolor_resolve(fcolor_id(defcolor_function));
-    ARGB_Color cl_macro = fcolor_resolve(fcolor_id(defcolor_macro));
-    ARGB_Color cl_enum  = fcolor_resolve(fcolor_id(defcolor_enum));
+    ARGB_Color cl_type   = fcolor_resolve(fcolor_id(defcolor_type));
+    ARGB_Color cl_func   = fcolor_resolve(fcolor_id(defcolor_function));
+    ARGB_Color cl_macro  = fcolor_resolve(fcolor_id(defcolor_macro));
+    ARGB_Color cl_global = fcolor_resolve(fcolor_id(defcolor_global));
+    ARGB_Color cl_enum   = fcolor_resolve(fcolor_id(defcolor_enum));
 
     Token_Iterator_Array it = token_iterator_pos(0, &token_array, visible_range.first);
     for (;;){
@@ -196,6 +197,8 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
         paint_text_color(app, text_layout_id, tok_range, cl_func); break;
         case CodeIndexNote_Macro:
         paint_text_color(app, text_layout_id, tok_range, cl_macro); break;
+        case CodeIndexNote_Global:
+        paint_text_color(app, text_layout_id, tok_range, cl_global); break;
         case CodeIndexNote_Enum:
         paint_text_color(app, text_layout_id, tok_range, cl_enum); break;
       }
