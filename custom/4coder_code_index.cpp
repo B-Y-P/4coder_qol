@@ -563,53 +563,123 @@ cpp_parse_type_def(Code_Index_File *index, Generic_Parse_State *state, Code_Inde
   }
 }
 
-function void
+function b32
+generic_scan_parens(Code_Index_File *index, Generic_Parse_State *state){
+  b32 at_paren_close = false;
+  i32 paren_nest_level = 1;
+  for (;;){
+    generic_parse_inc(state);
+    generic_parse_skip_soft_tokens(index, state);
+    Token *peek = token_it_read(&state->it);
+    if (peek == 0 || state->finished){
+      break;
+    }
+    paren_nest_level += (peek->kind == TokenBaseKind_ParentheticalOpen);
+    paren_nest_level -= (peek->kind == TokenBaseKind_ParentheticalClose);
+    at_paren_close = (paren_nest_level == 0);
+    if (at_paren_close){ break; }
+  }
+  return at_paren_close;
+}
+
+function b32
 cpp_parse_function(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   generic_parse_inc(state);
   generic_parse_skip_soft_tokens(index, state);
-  if (state->finished){
-    return;
-  }
-  Token *peek = token_it_read(&state->it);
-  Token *reset_point = peek;
-  if (peek != 0 && peek->sub_kind == TokenCppKind_ParenOp){
-    b32 at_paren_close = false;
-    i32 paren_nest_level = 0;
-    for (; peek != 0;){
-      generic_parse_inc(state);
-      generic_parse_skip_soft_tokens(index, state);
-      peek = token_it_read(&state->it);
-      if (peek == 0 || state->finished){
-        break;
-      }
+  if (state->finished){ return false; }
 
-      if (peek->kind == TokenBaseKind_ParentheticalOpen){
-        paren_nest_level += 1;
-      }
-      else if (peek->kind == TokenBaseKind_ParentheticalClose){
-        if (paren_nest_level > 0){
-          paren_nest_level -= 1;
-        }
-        else{
-          at_paren_close = true;
-          break;
-        }
-      }
-    }
+  Token *begin = token_it_read(&state->it);
+  if (begin == 0 || begin->sub_kind != TokenCppKind_ParenOp){ return false; }
 
-    if (at_paren_close){
-      generic_parse_inc(state);
-      generic_parse_skip_soft_tokens(index, state);
-      peek = token_it_read(&state->it);
-      if (peek != 0 &&
-          peek->kind == TokenBaseKind_ScopeOpen ||
-          peek->kind == TokenBaseKind_StatementClose){
-        index_new_note(index, state, Ii64(token), CodeIndexNote_Function, parent);
-      }
+  if (generic_scan_parens(index, state)){
+    generic_parse_inc(state);
+    generic_parse_skip_soft_tokens(index, state);
+    Token *end = token_it_read(&state->it);
+    if (end != 0 && end->kind == TokenBaseKind_ScopeOpen || end->kind == TokenBaseKind_StatementClose) {
+      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, begin);
+      Code_Index_Nest *nest = generic_parse_paren(index, state);
+      nest->parent = parent;
+      code_index_push_nest(&index->nest_list, nest);
+      index_new_note(index, state, Ii64(token), CodeIndexNote_Function, parent);
+
+      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, end);
+      return true;
     }
   }
+
+  state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, begin);
+  return false;
+}
+
+// global :: <type> <op>* <iden>{Emit} <op>* [=;]
+// e.g. My_Type g_var;
+// e.g. int** g_array[COUNT_Y][COUNT_X] = {};
+function b32
+cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
+  generic_parse_inc(state);
+  generic_parse_skip_soft_tokens(index, state);
+  Token *token = token_it_read(&state->it);
+  Token *reset_point = token;
+  Token *parens[16];  // im ok disallowing over 16-dimensional global arrays...
+  Token *iden = 0;
+  i64 paren_count = 0;
+
+  // <op>*
+  for (;;){
+    if (token == 0 || state->finished){ goto fail; }
+    if (token->sub_kind == TokenCppKind_BrackOp){
+      if (!generic_scan_parens(index, state)){ goto fail; }
+      if (paren_count >= ArrayCount(parens)){ goto fail; }
+      parens[paren_count++] = token;
+    }
+    else if (token->kind != TokenBaseKind_Operator || token->sub_kind == TokenCppKind_Eq){ break; }
+
+    generic_parse_inc(state);
+    generic_parse_skip_soft_tokens(index, state);
+    token = token_it_read(&state->it);
+  }
+
+  // <iden>{Emit}
+  if (token->kind != TokenBaseKind_Identifier){ goto fail; }
+  iden = token;
+  generic_parse_inc(state);
+  generic_parse_skip_soft_tokens(index, state);
+  token = token_it_read(&state->it);
+
+  // <op>*
+  for (;;){
+    if (token == 0 || state->finished){ goto fail; }
+    if (token->sub_kind == TokenCppKind_BrackOp){
+      if (!generic_scan_parens(index, state)){ goto fail; }
+      if (paren_count >= ArrayCount(parens)){ goto fail; }
+      parens[paren_count++] = token;
+    }
+    else if (token->kind != TokenBaseKind_Operator || token->sub_kind == TokenCppKind_Eq){ break; }
+
+    generic_parse_inc(state);
+    generic_parse_skip_soft_tokens(index, state);
+    token = token_it_read(&state->it);
+  }
+
+  // [;=]
+  if (token->sub_kind == TokenCppKind_Semicolon || token->sub_kind == TokenCppKind_Eq){
+    for (i64 i=0; i<paren_count; i += 1){
+      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, parens[i]);
+      Code_Index_Nest *nest = generic_parse_paren(index, state);
+      nest->parent = parent;
+      code_index_push_nest(&index->nest_list, nest);
+    }
+
+    state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, token);
+    generic_parse_inc(state);
+    index_new_note(index, state, Ii64(iden), CodeIndexNote_Global, parent);
+    return true;
+  }
+
+  fail:
   state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, reset_point);
+  return false;
 }
 
 function Code_Index_Nest*
@@ -936,8 +1006,10 @@ generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *sta
       else if (token->sub_kind == TokenCppKind_Using){
         cpp_parse_using(index, state, 0);
       }
-      else if (token->sub_kind == TokenCppKind_Identifier){
-        cpp_parse_function(index, state, 0);
+      else if (token->sub_kind == TokenCppKind_Identifier && cpp_parse_function(index, state, 0)){ }
+      else if (token->sub_kind == TokenCppKind_Identifier || token->kind == qol_TokenKind_Primitive){
+        state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, token);
+        cpp_parse_global(index, state, 0);
       }
       else{
         generic_parse_inc(state);

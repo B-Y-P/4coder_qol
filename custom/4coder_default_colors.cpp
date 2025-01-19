@@ -155,6 +155,7 @@ set_default_color_scheme(Application_Links *app){
   default_color_table.arrays[defcolor_function] = make_colors(arena, 0xFFAAAAAA);
   default_color_table.arrays[defcolor_macro] = make_colors(arena, 0xFF448844);
   default_color_table.arrays[defcolor_enum] = default_color_table.arrays[defcolor_str_constant];
+  default_color_table.arrays[defcolor_global] = make_colors(arena, 0xFF66AAAA);
   default_color_table.arrays[defcolor_control] = default_color_table.arrays[defcolor_preproc];
   default_color_table.arrays[defcolor_primitive] = default_color_table.arrays[defcolor_type];
   default_color_table.arrays[defcolor_struct] = default_color_table.arrays[defcolor_keyword];
