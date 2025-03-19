@@ -26,6 +26,13 @@ highlight_line_at_cursor = true;
 
 filebar_on_top = false;
 
+// ""  - Rectangle
+// "|" - Thin-line
+// "_" - Underscore
+// "L" - Corner
+cursor_style = "";
+mark_style   = "L";
+
 enable_undo_fade_out = true;
 
 // cursor_roundess is a value [0,50] setting the radius of
