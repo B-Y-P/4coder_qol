@@ -16,6 +16,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [01 - bottom filebars                           ](#c01)
 - [02 - config determines filebar position        ](#c02)
 - [03 - interpolate cursor                        ](#c03)
+- [04 - cursor styles                             ](#c04)
 
 ---
 
@@ -64,6 +65,13 @@ When the app is idle, it shouldn't drain your battery. It only updates when nece
 We can inform 4coder we still need updates by calling `animate_in_n_milliseconds` as necessary\
 We'll do this whenever the cursor is still more than half a pixel away from it's target\
 Now we can always finish our animation, but still idle as needed
+
+</br>
+
+### 04 - cursor styles <a name="c04"/>
+Let's combine the last two things we've added and customize our cursor rendering via the config file\
+We'll provide some standard options as well as "L" for corner-style\
+This emphasizes the half-open cursor-mark ranges 4coder uses for edits
 
 </br>
 
