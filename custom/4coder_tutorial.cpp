@@ -5,6 +5,7 @@
 // TOP
 
 global Tutorial_State tutorial = {};
+global f32 tutorial_padding = 44.f;
 
 CUSTOM_COMMAND_SIG(kill_tutorial)
 CUSTOM_DOC("If there is an active tutorial, kill it.")
@@ -52,35 +53,13 @@ CUSTOM_DOC("Shrink the tutorial window")
 function void
 tutorial_action(Application_Links *app, Tutorial_Action action){
   switch (action){
-    case TutorialAction_Minimize:
-    {
-      tutorial_minimize(app);
-    }break;
-
-    case TutorialAction_Maximize:
-    {
-      tutorial_maximize(app);
-    }break;
-
-    case TutorialAction_Prev:
-    {
-      tutorial.slide_index -= 1;
-    }break;
-
-    case TutorialAction_Next:
-    {
-      tutorial.slide_index += 1;
-    }break;
-
-    case TutorialAction_Exit:
-    {
-      kill_tutorial(app);
-    }break;
-
-    case TutorialAction_Restart:
-    {
-      tutorial.slide_index = 0;
-    }break;
+    case TutorialAction_Minimize: { tutorial_minimize(app);    }break;
+    case TutorialAction_Maximize: { tutorial_maximize(app);    }break;
+    case TutorialAction_Prev:     { tutorial.slide_index -= 1; }break;
+    case TutorialAction_Next:     { tutorial.slide_index += 1; }break;
+    case TutorialAction_Index:    { tutorial.slide_index = tutorial.hover_index; }break;
+    case TutorialAction_Exit:     { kill_tutorial(app);        }break;
+    case TutorialAction_Restart:  { tutorial.slide_index = 0;  }break;
   }
 }
 
@@ -97,18 +76,21 @@ tutorial_init_title_face(Application_Links *app){
   }
 }
 
+//-
+
 function void
 tutorial_render(Application_Links *app, Frame_Info frame_info, View_ID view_id){
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
   Face_Metrics metrics = get_face_metrics(app, face);
+  Mouse_State mouse = get_mouse_state(app);
 
   ////////
 
   Scratch_Block scratch(app);
   tutorial.slide_index = clamp(0, tutorial.slide_index, tutorial.slide_count - 1);
-  Tutorial_Slide_Function *slide_func = tutorial.slide_func_ptrs[tutorial.slide_index];
-  Tutorial_Slide slide = slide_func(app, scratch);
+  Tutorial_Desc desc = tutorial.slides[tutorial.slide_index];
+  Tutorial_Slide slide = desc.func(app, scratch);
 
   ////////
 
@@ -131,75 +113,105 @@ tutorial_render(Application_Links *app, Frame_Info frame_info, View_ID view_id){
   draw_rectangle_fcolor(app, region, 20.f, fcolor_id(defcolor_back));
   region = rect_inner(region, 10.f);
 
+  f32 s_width = metrics.normal_advance*3.5f;
+  Vec2_f32 m_p = V2f32(mouse.p);
   Vec2_f32 title_p = V2f32(region.x0, panel_y0 + (metrics.line_height*2.f) - title_height*0.5f);
 
   tutorial.hover_action = TutorialAction_None;
   if (tutorial.is_active){
+    push_fancy_string(scratch, slide.long_details.first, tutorial.face, fcolor_id(defcolor_pop1), string_u8_litexpr(" - "));
+    push_fancy_string(scratch, slide.long_details.first, tutorial.face, fcolor_id(defcolor_keyword), desc.title);
     draw_fancy_block(app, 0, fcolor_zero(), &slide.long_details, title_p);
 
     // NOTE(allen): buttons
     Rect_f32_Pair footer_pair = rect_split_top_bottom_neg(region, metrics.line_height*2.f);
     Rect_f32 footer = footer_pair.max;
     footer.x0 += 10.f;
-    footer.y0 -= 10.f;
-    footer.y1 -= 10.f;
-
-    f32 b_width = metrics.normal_advance*10.f;
-    Mouse_State mouse = get_mouse_state(app);
-    Vec2_f32 m_p = V2f32(mouse.p);
+    footer.y0 -= 5.f;
+    footer.y1 -= 5.f;
 
     {
-      Rect_f32_Pair pair = rect_split_left_right(footer, b_width);
+      Rect_f32_Pair pair = rect_split_left_right(footer, 1.2f*s_width);
       footer = pair.max;
-      footer.x0 += 10.f;
-      if (draw_button(app, pair.min, m_p, face, string_u8_litexpr("minimize"))){
-        tutorial.hover_action = TutorialAction_Minimize;
+      footer.x0 += 5.f;
+      if (draw_button(app, pair.min, m_p, face, string_u8_litexpr("<")) && tutorial.slide_index > 0){
+        tutorial.hover_action = TutorialAction_Prev;
+      }
+    }
+
+    for (i32 i = 0; i < tutorial.slide_count; i += 1)
+    {
+      Rect_f32_Pair pair = rect_split_left_right(footer, s_width);
+      footer = pair.max;
+      footer.x0 += 5.f;
+      if (draw_button(app, pair.min, m_p, face, push_stringf(scratch, "%d", i+1))){
+        tutorial.hover_action = TutorialAction_Index;
+        tutorial.hover_index  = i;
+
+        Fancy_Block block = {};
+        push_fancy_line(scratch, &block, tutorial.face, fcolor_id(defcolor_keyword), tutorial.slides[i].title);
+        Rect_f32 tool_rect = draw_tool_tip(app, face, &block, V2f32(m_p.x, pair.min.y0 - 4.f), region, 8.f, 4.f, fcolor_id(defcolor_back));
+        draw_rectangle_outline_fcolor(app, rect_inner(tool_rect, -2.f), 5.f, 4.f, fcolor_id(defcolor_list_item_active, 0));
+      }
+      if (tutorial.slide_index == i){
+        draw_rectangle_outline_fcolor(app, pair.min, 3.f, 2.f, fcolor_id(defcolor_list_item_active, 0));
       }
     }
 
     {
-      Rect_f32_Pair pair = rect_split_left_right(footer, b_width);
+      Rect_f32_Pair pair = rect_split_left_right(footer, 1.2f*s_width);
       footer = pair.max;
       footer.x0 += 10.f;
-      if (tutorial.slide_index > 0){
-        if (draw_button(app, pair.min, m_p, face, string_u8_litexpr("prev"))){
-          tutorial.hover_action = TutorialAction_Prev;
-        }
-      }
-    }
-
-    {
-      Rect_f32_Pair pair = rect_split_left_right(footer, b_width);
-      footer = pair.max;
-      footer.x0 += 10.f;
-      if (tutorial.slide_index < tutorial.slide_count - 1){
-        if (draw_button(app, pair.min, m_p, face, string_u8_litexpr("next"))){
-          tutorial.hover_action = TutorialAction_Next;
-        }
-      }
-    }
-
-    {
-      Rect_f32_Pair pair = rect_split_left_right(footer, b_width);
-      footer = pair.max;
-      footer.x0 += 10.f;
-      Rect_f32 exit_box = pair.min;
-      pair = rect_split_left_right(footer, b_width);
-      Rect_f32 restart_box = pair.min;
-
-      if (tutorial.slide_index == tutorial.slide_count - 1){
-        if (draw_button(app, exit_box, m_p, face, string_u8_litexpr("end"))){
-          tutorial.hover_action = TutorialAction_Exit;
-        }
-
-        if (draw_button(app, restart_box, m_p, face, string_u8_litexpr("restart"))){
-          tutorial.hover_action = TutorialAction_Restart;
-        }
+      if (draw_button(app, pair.min, m_p, face, string_u8_litexpr(">")) && tutorial.slide_index < tutorial.slide_count - 1){
+        tutorial.hover_action = TutorialAction_Next;
       }
     }
   }
   else{
     draw_fancy_line(app, 0, fcolor_zero(), &slide.short_details, title_p);
+  }
+
+  // header
+  {
+    Rect_f32_Pair header_pair = rect_split_top_bottom(region, metrics.line_height*1.5f);
+    Rect_f32 header = header_pair.min;
+    header.x1 -= 10.f;
+
+    {
+      Rect_f32_Pair pair = rect_split_left_right_neg(header, s_width);
+      header = pair.min;
+      header.x1 -= 5.f;
+      if (draw_button(app, pair.max, m_p, face, string_u8_litexpr("X"))){
+        tutorial.hover_action = TutorialAction_Exit;
+      }
+    }
+
+    {
+      Rect_f32_Pair pair = rect_split_left_right_neg(header, s_width);
+      header = pair.min;
+      header.x1 -= 5.f;
+
+      b32 in_button = draw_button(app, pair.max, m_p, face, string_u8_litexpr(" "));
+      if (in_button){
+        tutorial.hover_action = (tutorial.is_active ? TutorialAction_Minimize : TutorialAction_Maximize);
+      }
+
+      if (tutorial.is_active){
+        Rect_f32 icon = rect_inner(pair.max, 12.f);
+        icon.p0 += V2f32(-2.f, 2.f);
+        icon.p1 += V2f32(-2.f, 2.f);
+        draw_rectangle_outline_fcolor(app, icon, 2.f, 2.f, fcolor_id(defcolor_text_default));
+
+        Rect_f32 mask = rect_inner(icon, 1.f);
+        icon.p0 += V2f32(5.f, -5.f);
+        icon.p1 += V2f32(5.f, -5.f);
+        draw_rectangle_outline_fcolor(app, icon, 2.f, 2.f, fcolor_id(defcolor_text_default));
+        draw_rectangle_fcolor(app, mask, 2.f, in_button ? fcolor_id(defcolor_list_item_active, 0) : fcolor_id(defcolor_back));
+      }
+      else{
+        draw_rectangle_outline_fcolor(app, rect_inner(pair.max, 11.f), 2.f, 2.f, fcolor_id(defcolor_text_default));
+      }
+    }
   }
 
   draw_set_clip(app, prev_clip);
@@ -278,7 +290,7 @@ tutorial_run_loop(Application_Links *app){
 }
 
 function void
-run_tutorial(Application_Links *app, Tutorial_Slide_Function **slides, i32 slide_count){
+run_tutorial(Application_Links *app, Tutorial_Desc *slides, i32 slide_count){
   if (slide_count > 0){
     kill_tutorial(app);
     Panel_ID root_panel = panel_get_root(app);
@@ -288,7 +300,7 @@ run_tutorial(Application_Links *app, Tutorial_Slide_Function **slides, i32 slide
       tutorial.view = panel_get_view(app, tutorial_panel, Access_Always);
       view_set_passive(app, tutorial.view, true);
       tutorial.slide_index = 0;
-      tutorial.slide_func_ptrs = slides;
+      tutorial.slides = slides;
       tutorial.slide_count = slide_count;
       view_enqueue_command_function(app, tutorial.view, tutorial_run_loop);
     }
@@ -297,305 +309,453 @@ run_tutorial(Application_Links *app, Tutorial_Slide_Function **slides, i32 slide
 
 ////////////////////////////////
 
-global String_Const_u8 hms_title = string_u8_litexpr("Handmade Seattle Demo");
-
 function void
-hms_demo_tutorial_short_details(Application_Links *app, Arena *arena, Fancy_Line *short_details){
+tutorial_short_details(Application_Links *app, Arena *arena, Fancy_Line *short_details){
   Face_ID face = get_face_id(app, 0);
-  push_fancy_string(arena, short_details, tutorial.face, fcolor_id(defcolor_pop1), hms_title);
-  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_text_default), 8.f, 8.f, string_u8_litexpr("Welcome to Handmade Seattle and to this 4coder demo!"));
-  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_pop2), string_u8_litexpr("Click here to see more."));
+  push_fancy_string(arena, short_details, tutorial.face, fcolor_id(defcolor_pop1), string_u8_litexpr("4coder Tutorial"));
+  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_pop2), 8.f, 0.f, string_u8_litexpr("Click panel to see more."));
+  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_text_default), 8.f, 0.f, string_u8_litexpr("Run "));
+  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("kill_tutorial"));
+  push_fancy_string(arena, short_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr(" to close."));
 }
 
 function void
-hms_demo_tutorial_long_start(Application_Links *app, Arena *arena, Fancy_Block *long_details){
-  Fancy_Line *line = push_fancy_line(arena, long_details, tutorial.face, fcolor_id(defcolor_pop1), hms_title);
+tutorial_long_start(Application_Links *app, Arena *arena, Fancy_Block *long_details){
+  Fancy_Line *line = push_fancy_line(arena, long_details, tutorial.face, fcolor_id(defcolor_pop1), string_u8_litexpr("4coder Tutorial"));
 
   Face_ID face = get_face_id(app, 0);
-  //
   line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
-#define M "If you want more information than what you can find here, please "
-  push_fancy_string(arena, line, string_u8_litexpr(M));
-#undef M
+  push_fancy_string(arena, line, string_u8_litexpr("If you want more information than what you can find here, please "));
   push_fancy_string(arena, line, fcolor_id(defcolor_pop2), string_u8_litexpr("ask!"));
 
-  //
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr(""));
 }
 
 function void
-hms_demo_tutorial_binding_line(Application_Links *app, Arena *arena, Fancy_Block *long_details, Face_ID face, char *modifiers, char *key, char *description){
-  String_Const_u8 m = SCu8(modifiers);
-  String_Const_u8 k = SCu8(key);
-
-  f32 fill_size = (f32)k.size;
-  if (m.size > 0){
-    fill_size += (f32)m.size + 0.5f;
-  }
-  f32 pad_size = 0.f;
-  if (fill_size < 40.f){
-    pad_size = 40.f - fill_size;
-  }
-
-  Fancy_Line *line = line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
-  push_fancy_stringf(arena, line, pad_size, 0.5f, "<");
-  if (m.size > 0){
-    push_fancy_stringf(arena, line, fcolor_id(defcolor_keyword), 0.f, 0.5f, "%s", modifiers);
-  }
-  push_fancy_stringf(arena, line, fcolor_id(defcolor_pop2), "%s", key);
-  push_fancy_stringf(arena, line, 0.5f, 1.f, ">");
+tutorial_push_description(Application_Links *app, Arena *arena, Fancy_Line *line, Face_ID face, char* description){
+  f32 width = get_fancy_line_width(app, face, line);
   push_fancy_stringf(arena, line, "%s", description);
+  Face_Metrics metrics = get_face_metrics(app, face);
+  f32 advanced = width / metrics.normal_advance;
+  line->first->pre_margin = Max(0, tutorial_padding - advanced);
 }
 
+function void
+tutorial_binding_line(Application_Links *app, Arena *arena, Fancy_Block *long_details, Face_ID face, String_Const_u8 m, String_Const_u8 k, char *description){
+  Fancy_Line *line = line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
+  push_fancy_stringf(arena, line, 0, 0.5f, "<");
+  if (m.size > 0){
+    push_fancy_stringf(arena, line, fcolor_id(defcolor_keyword), 0, 0.5f, "%S", m);
+  }
+  push_fancy_stringf(arena, line, fcolor_id(defcolor_pop2), "%S", k);
+  push_fancy_stringf(arena, line, 0.5f, 1.f, ">");
+  tutorial_push_description(app, arena, line, face, description);
+}
+
+function void
+tutorial_binding_line(Application_Links *app, Arena *arena, Fancy_Block *long_details, Face_ID face, char *modifiers, char *key, char *description){
+  tutorial_binding_line(app, arena, long_details, face, SCu8(modifiers), SCu8(key), description);
+}
+
+function Command_Trigger*
+tutorial_binding(Custom_Command_Function *func){
+  for (Command_Map *m = framework_mapping.first_map; m != 0; m = m->next){
+    Command_Trigger_List *val = 0;
+    if (table_read(&m->cmd_to_binding_trigger, PtrAsInt(func), (u64*)&val)){
+      return val->first;
+    }
+  }
+  return 0;
+}
+
+function u8
+mod_bitfield(Input_Modifier_Set mods){
+  u8 m = 0;
+  for (i64 i = 0; i < mods.count; i += 1){
+    m |= mod_bit_from_key(mods.mods[i]);
+  }
+  return m;
+}
+
+function void
+tutorial_push_mods(Arena *arena, Fancy_Line *line, u8 mods){
+  for (u32 b=1; b <= mods; b <<= 1){
+    if (!HasFlag(b, mods)){ continue; }
+    String_Const_u8 string = SCu8(key_mod_name(mod_key_from_bit(b)));
+    push_fancy_string(arena, line, fcolor_id(defcolor_keyword), 0, 0.5f, string);
+  }
+}
+
+function void
+tutorial_push_trigger(Arena *arena, Fancy_Line *line, Command_Trigger *trigger){
+  Command_Trigger temp = *trigger;
+  temp.mods = {};
+  List_String_Const_u8 list = {};
+  command_trigger_stringize(arena, &list, &temp);
+  push_fancy_string(arena, line, fcolor_id(defcolor_pop2), list.first->next->string);
+}
+
+function void
+tutorial_push_meta(Arena *arena, Fancy_Line *line, Custom_Command_Function *f){
+  Command_Metadata *meta = get_command_metadata(f);
+  String_Const_u8 string = (meta ? SCu8(meta->name, meta->name_len) : string_u8_litexpr("null"));
+  push_fancy_string(arena, line, fcolor_id(defcolor_pop2), string);
+}
+
+function void
+tutorial_binding_line(Application_Links *app, Arena *arena, Fancy_Block *long_details, Face_ID face, Custom_Command_Function *a, Custom_Command_Function *b, char *description){
+  Fancy_Line *line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
+  Command_Trigger *ta = tutorial_binding(a);
+  Command_Trigger *tb = tutorial_binding(b);
+
+  push_fancy_stringf(arena, line, 0, 0.5f, "<");
+
+  if (ta == 0 || tb == 0){
+    tutorial_push_meta(arena, line, a);
+    push_fancy_stringf(arena, line, "/");
+    tutorial_push_meta(arena, line, b);
+  }
+  else{
+    u8 mod_a = mod_bitfield(ta->mods);
+    u8 mod_b = mod_bitfield(tb->mods);
+    u8 diff = mod_a ^ mod_b;
+    u8 mod_lo = mod_a & (diff - 1);
+    u8 mod_hi = mod_a & ~(mod_lo|diff);
+
+    u64 diff_count = (0x8DA691691448ULL >> (diff * 3)) & 0x7;  // 4-bit popcnt lut
+    diff_count += (ta->kind != tb->kind || ta->sub_code != tb->sub_code);
+    if (diff_count > 1){
+      tutorial_push_mods(arena, line, mod_a);
+      tutorial_push_trigger(arena, line, ta);
+      push_fancy_stringf(arena, line, 0.5f, 0.5f, "> / <");
+      tutorial_push_mods(arena, line, mod_b);
+      tutorial_push_trigger(arena, line, tb);
+    }
+    else {
+      tutorial_push_mods(arena, line, mod_lo);
+      if (diff != 0){
+        push_fancy_stringf(arena, line,  0.0f, 0.0f, "[");
+        tutorial_push_mods(arena, line, diff);
+        push_fancy_stringf(arena, line, -0.5f, 0.5f, "]");
+      }
+      tutorial_push_mods(arena, line, mod_hi);
+
+      tutorial_push_trigger(arena, line, ta);
+      if (diff == 0){
+        push_fancy_stringf(arena, line, "/");
+        tutorial_push_trigger(arena, line, tb);
+      }
+    }
+  }
+
+  push_fancy_stringf(arena, line, 0.5f, 1.f, ">");
+  tutorial_push_description(app, arena, line, face, description);
+}
+
+function void
+tutorial_binding_line(Application_Links *app, Arena *arena, Fancy_Block *long_details, Face_ID face, Custom_Command_Function *func, char *description){
+  Fancy_Line *line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
+  Command_Trigger *t = tutorial_binding(func);
+
+  push_fancy_stringf(arena, line, 0, 0.5f, "<");
+
+  if (t == 0){
+    tutorial_push_meta(arena, line, func);
+  }
+  else{
+    tutorial_push_mods(arena, line, mod_bitfield(t->mods));
+    tutorial_push_trigger(arena, line, t);
+  }
+
+  push_fancy_stringf(arena, line, 0.5f, 1.f, ">");
+  tutorial_push_description(app, arena, line, face, description);
+}
+
+//-
+
 function Tutorial_Slide
-hms_demo_tutorial_slide_1(Application_Links *app, Arena *arena){
+tutorial_slide_basic(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
-
+  tutorial_short_details(app, arena, &result.short_details);
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Let's start with a few navigation commands:"));
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Let's start with a few basic commands:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "Comma", "change active panel");
+  tutorial_binding_line(app, arena, long_details, face,
+                        write_text_input, "Insert text at cursor");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "*AnyArrow*", "move cursor one character or line");
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "ArrowKey", "Move cursor one character or line");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "*AnyArrow*", "move cursor by 'chunks'");
+  tutorial_binding_line(app, arena, long_details, face,
+                        backspace_char, delete_char, "Delete previous/next character");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Home/End", "move cursor to the first/last character of the line");
+  tutorial_binding_line(app, arena, long_details, face,
+                        move_left_whitespace_boundary, move_right_whitespace_boundary, "Move left/right to the next *word*");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "PageUp/PageDown", "move cursor by full pages up/down");
+  tutorial_binding_line(app, arena, long_details, face,
+                        seek_beginning_of_line, seek_end_of_line, "Move to the start/end of the line");
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Available in code files:"));
+  tutorial_binding_line(app, arena, long_details, face,
+                        page_up, page_down, "Move up/down by one page");
 
+  tutorial_binding_line(app, arena, long_details, face,
+                        goto_beginning_of_file, goto_end_of_file, "Move up/down by one page");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "LeftBracket", "move cursor and mark to surrounding scope");
+  tutorial_binding_line(app, arena, long_details, face,
+                        center_view, "Center scroll on cursor");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "RightBracket", "move cursor and mark to previous scope");
+  tutorial_binding_line(app, arena, long_details, face,
+                        build_in_build_panel, "Build in *compilation* (Windows -> `build.bat`; Unix -> `build.sh`");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "Quote", "move cursor and mark to next scope");
+  tutorial_binding_line(app, arena, long_details, face,
+                        goto_next_jump, goto_prev_jump, "Goto next/prev jump (search results or build errors)");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "RightBracket", "move cursor and mark to previous top-level scope");
+  tutorial_binding_line(app, arena, long_details, face,
+                        goto_line, "Query line number to jump to");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "Quote", "move cursor and mark to next scope at the same level as the current scope");
+  tutorial_binding_line(app, arena, long_details, face,
+                        save, save_all_dirty_buffers, "Save current/all files");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        reopen, "Reopen current file (discard unsaved edits and/or load external changes)");
 
   return(result);
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_2(Application_Links *app, Arena *arena){
+tutorial_slide_edit(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Now a look at basic editing:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "TextInsert", "non-modal text insertion works in any user-writable buffers at the cursor");
+  tutorial_binding_line(app, arena, long_details, face,
+                        word_complete, word_complete_prev, "Suggest next/prev auto-complete entry for current identifier");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Backspace/Delete", "delete the previous/next character from the cursor");
+  tutorial_binding_line(app, arena, long_details, face,
+                        undo, redo, "Undo/Redo");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "Z", "undo the last edit");
+  tutorial_binding_line(app, arena, long_details, face,
+                        set_mark, "Place `mark` at cursor position. Text between cursor/mark is the `range`");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "Y", "redo the last undone edit");
+  tutorial_binding_line(app, arena, long_details, face,
+                        cursor_mark_swap, "Swap cursor and mark positions");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "L", "duplicate the current line");
+  tutorial_binding_line(app, arena, long_details, face,
+                        delete_range, "Delete text inside `range`");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "Up/Down", "move the current line");
+  tutorial_binding_line(app, arena, long_details, face,
+                        copy, "Copy text inside `range`");
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Range commands based on a cursor and mark (emacs style):"));
+  tutorial_binding_line(app, arena, long_details, face,
+                        cut, "Cut text inside `range`");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "Space", "moves the mark to the cursor");
+  tutorial_binding_line(app, arena, long_details, face,
+                        paste_and_indent, "Paste copied text");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "D", "delete the range");
+  tutorial_binding_line(app, arena, long_details, face,
+                        duplicate_line, "Duplicate the current line");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "C", "copy the range");
+  tutorial_binding_line(app, arena, long_details, face,
+                        delete_line, "Delete the current line");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "X", "cut the range");
+  tutorial_binding_line(app, arena, long_details, face,
+                        move_line_up, move_line_down, "Move the current line up/down");
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Paste options with a multi-stage clipboard:"));
+  tutorial_binding_line(app, arena, long_details, face,
+                        keyboard_macro_start_recording, keyboard_macro_finish_recording, "Start/Stop recording macro");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "V", "paste the clipboard to the buffer");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control Shift", "V", "paste the clipboard to the buffer cycling through the clipboard's 'clips'");
-
-  return(result);
-}
-
-function Tutorial_Slide
-hms_demo_tutorial_slide_3(Application_Links *app, Arena *arena){
-  Tutorial_Slide result = {};
-
-  Face_ID face = get_face_id(app, 0);
-  tutorial_init_title_face(app);
-
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
-
-  Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Now try beginning a file lister:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "N", "begin a file lister for exploring the file system - always creating a new file");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "O", "begin a file lister for exploring the file system - ultimiately opening or creating a file");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "O", "same as previous option but opens in the other panel");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Inside a file lister:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "TextInsert", "narrows the lister down to options with substrings matching the text field");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Backspace", "backspace the end of the text field");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Up/Down", "move the highlighted option up/down");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "PageUp/PageDown", "move the highlighted option up/down by a 'large chunk'");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Return/Tab", "select the highlighted option;  when a folder is highlighted it is opened in the lister");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Escape", "cancel the operation");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("There are also buffer listers for operations on buffers that are already open:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "I", "begin a buffer lister and switch to the selected buffer");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "K", "begin a buffer lister and try to kill the selected buffer");
+  tutorial_binding_line(app, arena, long_details, face,
+                        keyboard_macro_replay, "Replay macro");
 
   return(result);
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_4(Application_Links *app, Arena *arena){
+tutorial_slide_panel(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("The command lister makes all commands available in one place:"));
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Now to take a look at panels:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "X", "a lister of all commands");
+  tutorial_binding_line(app, arena, long_details, face,
+                        change_active_panel, "Change active panel");
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Try some of these commands from the command lister:"));
+  tutorial_binding_line(app, arena, long_details, face,
+                        vsplit, hsplit, "Splits the current panel vertically/horizontally");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "toggle_filebar", "toggle the panel's filebar");
+  tutorial_binding_line(app, arena, long_details, face,
+                        close_panel, "Closes the current panel");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "toggle_line_numbers", "toggle the panel's line number");
+  tutorial_binding_line(app, arena, long_details, face,
+                        change_active_panel, change_active_panel_backwards, "Focus next/prev panel");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "set_eol_mode_*", "change how a buffer prefers to fixup it's line endings");
+  tutorial_binding_line(app, arena, long_details, face,
+                        change_to_build_panel, "Focus *compilation* panel");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "close_panel", "close the current panel");
+  tutorial_binding_line(app, arena, long_details, face,
+                        close_build_panel, "Close *compilation* panel");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "open_panel_vsplit", "create a vertical split in the current panel");
+  tutorial_binding_line(app, arena, long_details, face,
+                        view_buffer_other_panel, "Open current buffer in neighboring panel");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "open_panel_hsplit", "create a horizontal split in the current panel");
+  tutorial_binding_line(app, arena, long_details, face,
+                        swap_panels, "Swap neighboring panels");
+
+  push_fancy_line(arena, long_details, face, string_u8_empty);
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("Panels can be resized by clicking and dragging the dividers"));
+
+  {
+    Fancy_Line *line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("There's an upper limit of "));
+    push_fancy_string(arena, line, face, fcolor_id(defcolor_int_constant), string_u8_litexpr("16"));
+    push_fancy_string(arena, line, face, fcolor_id(defcolor_text_default), string_u8_litexpr(" for panels. Subsequent splits will no-op"));
+  }
+
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("Custom layers may use panels for their own elements. For example, this tutorial"));
 
   return(result);
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_5(Application_Links *app, Arena *arena){
+tutorial_slide_lists(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
+
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Here are the different lists available"));
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        command_lister, "List available editor commands to run");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        project_command_lister, "List available project commands to run");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        interactive_open_or_new, "List current files/directories to switch/navigate to, creating new as needed");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        interactive_switch_buffer, "List loaded files/directories to switch to");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        theme_lister, "List available themes to switch to");
+
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Once you're in a lister:"));
+
+  tutorial_padding = 25.f;
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "*TextInsert*", "Filters out less specific entries");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "*ArrowKey*", "Move active lister entry");
+
+  //tutorial_binding_line(app, arena, long_details, face,
+  //                      page_up, page_down, "Move active lister up/down by one page");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "MouseWheel", "Scroll lister");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "LeftClick", "Select hovered lister entry");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "Return", "Select active lister entry");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "Escape", "Cancel lister");
+  tutorial_padding = 44.f;
+
+  return(result);
+}
+
+function Tutorial_Slide
+tutorial_slide_jumps(Application_Links *app, Arena *arena){
+  Tutorial_Slide result = {};
+
+  Face_ID face = get_face_id(app, 0);
+  tutorial_init_title_face(app);
+
+  tutorial_short_details(app, arena, &result.short_details);
+
+  Fancy_Block *long_details = &result.long_details;
+  tutorial_long_start(app, arena, long_details);
+
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Common navigation commands:"));
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        search, "query for string in current buffer, Up/Down Arrow to go next/prev occurrence");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        jump_to_definition_at_cursor, "jump to definition at cursor");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        jump_to_last_point, "jump back");
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Fast navigation by jump lists:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "F", "after the user answers a query for a string generate a jump list of matches");
+  tutorial_binding_line(app, arena, long_details, face,
+                        list_all_substring_locations_case_insensitive, "query for string to generate a jump list of matches");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control Shift", "T", "extract an identifier from the text under cursor and generate a jump list of matches");
+  tutorial_binding_line(app, arena, long_details, face,
+                        list_all_locations_of_identifier, "using the identifier under the cursor, generate a jump list of matches");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control Shift", "I", "parse the current buffer as a C/C++ source and generate a jump list of functions");
+  tutorial_binding_line(app, arena, long_details, face,
+                        list_all_functions_current_buffer, "generate a jump list of all functions in current buffer");
 
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("After generating a jump list it is bound as the active jump list enabling these commands:"));
+  tutorial_binding_line(app, arena, long_details, face,
+                        list_all_functions_all_buffers, "generate a jump list of all functions in all loaded buffers");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "N", "jump to the next jump location");
+  tutorial_binding_line(app, arena, long_details, face,
+                        list_all_locations_of_selection, "using current selection, generate a jump list");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "N", "jump to the previous jump location");
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Build commands which output to *compilation* create jump list for error messages"));
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("After generating a jump list, the following commands are enabled:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "M", "jump to the first jump");
+  tutorial_binding_line(app, arena, long_details, face,
+                        goto_next_jump, goto_prev_jump, "goto next/prev jump (search results or build errors)");
+
+  tutorial_binding_line(app, arena, long_details, face,
+                        goto_first_jump, "goto first jump in jump list");
 
   return(result);
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_6(Application_Links *app, Arena *arena){
+tutorial_slide_vws(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Virtual whitespace:"));
 
@@ -621,6 +781,16 @@ hms_demo_tutorial_slide_6(Application_Links *app, Arena *arena){
 
   {
     Fancy_Line *line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
+    push_fancy_stringf(arena, line, "\tIn `config.4coder` set `");
+    push_fancy_stringf(arena, line, fcolor_id(defcolor_pop2), "enable_virtual_whitespace");
+    push_fancy_stringf(arena, line, " = " );
+    push_fancy_stringf(arena, line, fcolor_id(defcolor_int_constant), "true");
+    push_fancy_stringf(arena, line, ";" );
+    push_fancy_stringf(arena, line, "` turn this feature on by default");
+  }
+
+  {
+    Fancy_Line *line = push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default));
     push_fancy_stringf(arena, line, "\tUse the command ");
     push_fancy_stringf(arena, line, fcolor_id(defcolor_pop2), "toggle_virtual_whitespace");
     push_fancy_stringf(arena, line, " to turn this feature on and off");
@@ -635,59 +805,52 @@ hms_demo_tutorial_slide_6(Application_Links *app, Arena *arena){
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Auto Indentation:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "Tab", "auto indent the lines marked by the range; the effect is only visible with virtual whitespace off.");
+  tutorial_padding = 20.f;
+  tutorial_binding_line(app, arena, long_details, face,
+                        auto_indent_range, "Auto indent the lines marked by the range; the effect is only visible with virtual whitespace off.");
+  tutorial_padding = 44.f;
 
   return(result);
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_7(Application_Links *app, Arena *arena){
+tutorial_slide_sys(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("Builds, scripts, and projects:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "M", "searches for and runs a build script (windows -> 'build.bat'; unix -> 'build.sh')");
+  tutorial_binding_line(app, arena, long_details, face,
+                        build_in_build_panel, "Searches for and runs a build script (Windows -> `build.bat`; Unix -> `build.sh`)");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "execute_any_cli", "queries the user for a buffer name and a system command then runs the command and pipes output to the buffer");
+  tutorial_binding_line(app, arena, long_details, face,
+                        execute_any_cli, "Query for a buffer name and a cli command, then run it, piping output to the buffer");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "execute_previous_cli", "repeats an execute_any_cli command with the same command and ouptut buffer");
+  tutorial_binding_line(app, arena, long_details, face,
+                        execute_previous_cli, "Repeats last `execute_any_cli` command with the same command and ouptut buffer");
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("If a script/command generates output that can be parsed as jumps (e.g. compilation errors) then it becomes the active jump buffer:"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "N", "jump to the next jump location");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "N", "jump to the previous jump location");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt Shift", "M", "jump to the first jump");
-
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("The project system enables rich bindings of arbitrary system scripts (when a project is loaded):"));
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "F#", "run a script bound to the corresponding index in the loaded project");
+  tutorial_binding_line(app, arena, long_details, face,
+                        "", "F#", "run a script bound to the corresponding index in the loaded project");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "project_command_lister", "use a lister to examine all system commands encoded in the loaded project");
+  tutorial_binding_line(app, arena, long_details, face,
+                        project_command_lister, "List available project commands to run");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "load_project", "searches for and loads a 'project.4coder' file");
+  tutorial_binding_line(app, arena, long_details, face,
+                        load_project, "Searches for and loads a 'project.4coder' file");
 
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "setup_new_project", "command to generate a new 'project.4coder' file and build scripts");
+  tutorial_binding_line(app, arena, long_details, face,
+                        setup_new_project, "Generate a new 'project.4coder' file and build scripts");
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default),
                   string_u8_litexpr("\tCheckout 'project.4coder' to see more about what is in a project."));
@@ -696,202 +859,36 @@ hms_demo_tutorial_slide_7(Application_Links *app, Arena *arena){
 }
 
 function Tutorial_Slide
-hms_demo_tutorial_slide_8(Application_Links *app, Arena *arena){
+tutorial_slide_end(Application_Links *app, Arena *arena){
   Tutorial_Slide result = {};
 
   Face_ID face = get_face_id(app, 0);
   tutorial_init_title_face(app);
 
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
+  tutorial_short_details(app, arena, &result.short_details);
 
   Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default),
-                  string_u8_litexpr("Probably the biggest feature in 4coder is that so many things about it can be customized."));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default),
-                  string_u8_litexpr("The project loaded for this demo is the 'default custom layer' everything here could be done differently, as you see fit."));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default),
-                  string_u8_litexpr(""));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Search for these commands to see some of the features available to customization:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "F", "(hint!) this is the default binding for search, use it to find these functions");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "write_text_input", "the default implementation for text insertion");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "copy", "the default implementation copying to clipboard");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "goto_line", "jump to a line specified by the user (which you should try by the way!)");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "interactive_switch_buffer", "see how this command encodes it's use of a lister with the call 'get_buffer_from_user'");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "project_command_lister", "again see how this command encodes a lister with a call, this time 'prj_cmd_from_user'");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "setup_default_mapping", "defines the mapping of commands to bindings");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr(""));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tThe macros CUSTOM_COMMAND_SIG and CUSTOM_DOC markup the commands to create the list of all available commands."));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default), string_u8_litexpr("\tThis means that user written commands that use the same markup automatically appear in the command_lister along side built in commands!"));
-
-  return(result);
-}
-
-function Tutorial_Slide
-hms_demo_tutorial_slide_9(Application_Links *app, Arena *arena){
-  Tutorial_Slide result = {};
-
-  Face_ID face = get_face_id(app, 0);
-  tutorial_init_title_face(app);
-
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
-
-  Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_text_default),
-                  string_u8_litexpr("The customization system exposes much more than just commands to be customized..."));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "F", "(hint!) this is the default binding for search, use it to find these functions");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Write completely custom GUIs:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "run_lister/lister_render", "the input handling loop for listers; and the render handler for listers");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "tutorial_run_loop/tutorial_render", "underlying implementation for the tutorial system powering this demo!");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Write custom text coloring and highlighting in buffers:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "draw_cpp_token_colors", "syntax highlighting for C++ tokens.");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "draw_line_number_margin", "draws a line number margin");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "default_render_buffer", "puts together all the default markup in buffer rendering");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Write custom line layout rules:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "layout_unwrapped_small_blank_lines", "a funky layout that makes blank lines half height");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "layout_index_unwrapped__inner", "the unwrapped version of the virtual whitespace layout logic");
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Write custom smoothing rules that interact with buffer and UI scrolling:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "snap_delta", "a delta rule that snaps to the destination point instantly");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "fixed_time_cubic_delta", "the smooth scrolling enabled in this build");
-
-  return(result);
-}
-
-function Tutorial_Slide
-hms_demo_tutorial_slide_10(Application_Links *app, Arena *arena){
-  Tutorial_Slide result = {};
-
-  Face_ID face = get_face_id(app, 0);
-  tutorial_init_title_face(app);
-
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
-
-  Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1),
-                  string_u8_litexpr("Some miscellaneous things to try:"));
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "", "Tab", "in a code file this triggers the cyclic word complete, often a handy command");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "F/R", "forward/reverse iterative search");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "A", "replace all instances of a string in the range");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Control", "0", "insert an assignment to an empty struct or array");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "0", "insert a #if 0 / #endif pair at the cursor and mark");
-
-  hms_demo_tutorial_binding_line(app, arena, long_details, face,
-                                 "Alt", "2", "open the corresponding .h/.cpp file to the current buffer in the second panel");
-
-  return(result);
-}
-
-function Tutorial_Slide
-hms_demo_tutorial_slide_11(Application_Links *app, Arena *arena){
-  Tutorial_Slide result = {};
-
-  Face_ID face = get_face_id(app, 0);
-  tutorial_init_title_face(app);
-
-  hms_demo_tutorial_short_details(app, arena, &result.short_details);
-
-  Fancy_Block *long_details = &result.long_details;
-  hms_demo_tutorial_long_start(app, arena, long_details);
+  tutorial_long_start(app, arena, long_details);
 
   push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr(""));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr(""));
-
-  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("\t\tThanks for checking out the demo!"));
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("\t\tCongrats, you've made it to the end ^.^"));
+  push_fancy_line(arena, long_details, face, fcolor_id(defcolor_pop1), string_u8_litexpr("\t\tThanks for checking out 4coder. Best of luck!"));
 
   return(result);
 }
 
-CUSTOM_COMMAND_SIG(hms_demo_tutorial)
+CUSTOM_COMMAND_SIG(begin_tutorial)
 CUSTOM_DOC("Tutorial for built in 4coder bindings and features.")
 {
-  local_persist Tutorial_Slide_Function *slides[] = {
-    // basic navigation
-    hms_demo_tutorial_slide_1,
-    // basic editing
-    hms_demo_tutorial_slide_2,
-    // file and buffer lister
-    hms_demo_tutorial_slide_3,
-    // command lister
-    hms_demo_tutorial_slide_4,
-    // advanced navigation
-    hms_demo_tutorial_slide_5,
-    // virtual whitespace
-    hms_demo_tutorial_slide_6,
-    // system commands
-    hms_demo_tutorial_slide_7,
-    // customizable commands
-    hms_demo_tutorial_slide_8,
-    // customizable ui
-    hms_demo_tutorial_slide_9,
-    // miscellanea
-    hms_demo_tutorial_slide_10,
-    // end
-    hms_demo_tutorial_slide_11,
+  local_persist Tutorial_Desc slides[] = {
+    { tutorial_slide_basic, string_u8_litexpr("Basics") },   
+    { tutorial_slide_edit,  string_u8_litexpr("Editing") },   
+    { tutorial_slide_panel, string_u8_litexpr("Panels") },   
+    { tutorial_slide_lists, string_u8_litexpr("Lists") },   
+    { tutorial_slide_jumps, string_u8_litexpr("Jumps") },   
+    { tutorial_slide_vws,   string_u8_litexpr("Virtual Whitespace") },   
+    { tutorial_slide_sys,   string_u8_litexpr("System Commands") },   
+    { tutorial_slide_end,   string_u8_litexpr("End") },   
   };
   run_tutorial(app, slides, ArrayCount(slides));
 }
