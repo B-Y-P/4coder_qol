@@ -14,6 +14,7 @@ enum{
   TutorialAction_Maximize,
   TutorialAction_Prev,
   TutorialAction_Next,
+  TutorialAction_Index,
   TutorialAction_Exit,
   TutorialAction_Restart,
 };
@@ -25,6 +26,11 @@ struct Tutorial_Slide{
 
 typedef Tutorial_Slide Tutorial_Slide_Function(Application_Links *app, Arena *arena);
 
+struct Tutorial_Desc{
+  Tutorial_Slide_Function *func;
+  String_Const_u8 title;
+};
+
 struct Tutorial_State{
   b32 in_tutorial;
   View_ID view;
@@ -33,9 +39,10 @@ struct Tutorial_State{
   Tutorial_Action hover_action;
   Tutorial_Action depressed_action;
 
-  i32 slide_index;
-  Tutorial_Slide_Function **slide_func_ptrs;
+  Tutorial_Desc *slides;
   i32 slide_count;
+  i32 slide_index;
+  i32 hover_index;
 };
 
 #endif

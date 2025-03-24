@@ -389,6 +389,19 @@ CUSTOM_DOC("Create a new panel by horizontally splitting the active panel.")
   view_set_buffer(app, new_view, buffer, 0);
 }
 
+CUSTOM_COMMAND_SIG(vsplit)
+CUSTOM_DOC("Create a new panel by vertically splitting the active panel.")
+{
+  open_panel_vsplit(app);
+}
+
+CUSTOM_COMMAND_SIG(hsplit)
+CUSTOM_DOC("Create a new panel by horizontally splitting the active panel.")
+{
+  open_panel_hsplit(app);
+}
+
+
 ////////////////////////////////
 
 // NOTE(allen): Credits to nj/FlyingSolomon for authoring the original version of this helper.
