@@ -1,8 +1,6 @@
 
 global View_ID g_qol_lister_view;
-global View_ID g_qol_view;
 global Lister* g_qol_lister;
-global f32 g_qol_cur_bot_height;
 global Lister_Node* g_qol_mouse_node;
 
 function Vec2_i32
@@ -305,7 +303,7 @@ qol_run_lister(Application_Links *app, Lister *lister){
   View_Context_Block ctx_block(app, view, &ctx);
   lister->handlers.navigate(app, view, lister, 0);
 
-  g_qol_view = view;
+  g_qol_lister_view = view;
   g_qol_lister = lister;
   qol_bot_text_set(lister->query.string);
 
@@ -473,63 +471,6 @@ qol_run_lister(Application_Links *app, Lister *lister){
   }
 
   g_qol_lister = 0;
+  g_qol_nxt_bot_height = 0.f;
   return lister->out;
-}
-
-function void
-qol_tick_lister(Application_Links *app, Frame_Info frame_info){
-  Face_ID face_id = get_face_id(app, 0);
-  Face_Metrics metrics = get_face_metrics(app, face_id);
-  f32 line_height = metrics.line_height;
-  f32 block_height = lister_get_block_height(line_height);
-  f32 text_field_height = qol_bot_text_height(app, metrics);
-
-  f32 max_height = 0.5f*rect_height(global_get_screen_rectangle(app));
-  f32 qol_nxt_bottom_height = text_field_height;
-
-  if (g_qol_lister){
-    Vec2_i32 grid = qol_lister_grid_dim(app, g_qol_lister);
-    qol_nxt_bottom_height += grid.y*block_height;
-    view_set_active(app, g_qol_view);
-  }
-
-  qol_nxt_bottom_height = Min(qol_nxt_bottom_height, max_height);
-
-  qol_interp(g_qol_cur_bot_height, qol_nxt_bottom_height, frame_info.animation_dt, 1e-14f);
-  if (abs_f32(g_qol_cur_bot_height - qol_nxt_bottom_height) >= 1.f){
-    animate_in_n_milliseconds(app, 0);
-  }
-  else{
-    g_qol_cur_bot_height = qol_nxt_bottom_height;
-  }
-  view_set_split_pixel_size(app, g_qol_lister_view, (i32)g_qol_cur_bot_height);
-}
-
-function void
-qol_lister_spin(Application_Links *app){
-  View_ID view = get_this_ctx_view(app, Access_Always);
-  View_Context ctx = view_current_context(app, view);
-  ctx.render_caller = qol_lister_render;
-  ctx.hides_buffer = true;
-  View_Context_Block ctx_block(app, view, &ctx);
-  change_active_panel_backwards(app);
-
-  for (;;){
-    User_Input in = get_next_input(app, EventPropertyGroup_Any, 0);
-    if (in.abort){ break; }
-    leave_current_input_unhandled(app);
-  }
-}
-
-function void
-qol_lister_init(Application_Links *app){
-  Panel_ID root = panel_get_root(app);
-  Panel_ID split = panel_split(app, root, Dimension_Y);
-  if (split){
-    panel_set_split(app, split, PanelSplitKind_FixedPixels_Max, 1.f);
-    g_qol_lister_view = panel_get_view(app, panel_get_child(app, split, Side_Max), Access_Always);
-    view_enqueue_command_function(app, g_qol_lister_view, qol_lister_spin);
-    view_set_setting(app, g_qol_lister_view, ViewSetting_ShowFileBar, false);
-    view_set_passive(app, g_qol_lister_view, true);
-  }
 }

@@ -78,6 +78,12 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(qol_jump_down,              KeyCode_LeftBracket, KeyCode_Control);
   Bind(qol_jump_up,                KeyCode_RightBracket, KeyCode_Control);
 
+  Bind(qol_bview_active_to_bottom, KeyCode_Return, KeyCode_Alt, KeyCode_Shift);
+  Bind(qol_bview_bottom_to_active, KeyCode_Return, KeyCode_Alt);
+  Bind(qol_bview_toggle,           KeyCode_Return, KeyCode_Control, KeyCode_Shift);
+  Bind(qol_bview_scroll_up,        KeyCode_PageUp, KeyCode_Control, KeyCode_Shift);
+  Bind(qol_bview_scroll_down,      KeyCode_PageDown, KeyCode_Control, KeyCode_Shift);
+
   SelectMap(file_id);
   Bind(delete_char,            KeyCode_Delete);
   Bind(backspace_char,         KeyCode_Backspace);

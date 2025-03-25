@@ -142,16 +142,10 @@ get_or_open_build_panel(Application_Links *app){
   if (view == 0){
     view = open_build_footer_panel(app);
   }
+  if (view == g_qol_b_view){
+    qol_bview_open(app);
+  }
   return(view);
-}
-
-function void
-set_fancy_compilation_buffer_font(Application_Links *app){
-  Scratch_Block scratch(app);
-  Buffer_ID buffer = get_comp_buffer(app);
-  Font_Load_Location font = {};
-  font.file_name = def_search_normal_full_path(scratch, str8_lit("fonts/Inconsolata-Regular.ttf"));
-  set_buffer_face_by_font_load_location(app, buffer, &font);
 }
 
 function void
@@ -170,9 +164,9 @@ CUSTOM_DOC("Looks for a build.bat, build.sh, or makefile in the current and pare
   Buffer_ID buffer = view_get_buffer(app, view, Access_Always);
 
   View_ID build_view = get_or_open_build_panel(app);
+  qol_bview_set_buffer(app, buffer_identifier_to_id(app, standard_build_build_buffer_identifier));
 
   standard_search_and_build(app, build_view, buffer);
-  set_fancy_compilation_buffer_font(app);
 
   block_zero_struct(&prev_location);
   lock_jump_buffer(app, string_u8_litexpr("*compilation*"));
@@ -187,10 +181,7 @@ CUSTOM_DOC("If the special build panel is open, closes it.")
 CUSTOM_COMMAND_SIG(change_to_build_panel)
 CUSTOM_DOC("If the special build panel is open, makes the build panel the active panel.")
 {
-  View_ID view = get_or_open_build_panel(app);
-  if (view != 0){
-    view_set_active(app, view);
-  }
+  qol_bview_bottom_to_active(app);
 }
 
 // BOTTOM
