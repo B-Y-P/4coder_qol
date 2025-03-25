@@ -89,6 +89,7 @@ lock_jump_buffer(Application_Links *app, String_Const_u8 name){
   if (name.size < sizeof(locked_buffer_space)){
     block_copy(locked_buffer_space, name.str, name.size);
     locked_buffer = SCu8(locked_buffer_space, name.size);
+    qol_bview_set_buffer(app, get_buffer_by_name(app, locked_buffer, Access_Always));
     Scratch_Block scratch(app);
     String_Const_u8 escaped = string_escape(scratch, name);
     LogEventF(log_string(app, M), scratch, 0, 0, system_thread_get_id(),
@@ -163,32 +164,19 @@ view_get_is_passive(Application_Links *app, View_ID view_id){
 
 function View_ID
 open_footer_panel(Application_Links *app, View_ID view){
-  View_ID special_view = open_view(app, view, ViewSplit_Bottom);
-  new_view_settings(app, special_view);
-  Buffer_ID buffer = view_get_buffer(app, special_view, Access_Always);
-  Face_ID face_id = get_face_id(app, buffer);
-  Face_Metrics metrics = get_face_metrics(app, face_id);
-  view_set_split_pixel_size(app, special_view, (i32)(metrics.line_height*14.f));
-  view_set_passive(app, special_view, true);
-  return(special_view);
+  qol_bview_open(app);
+  return g_qol_b_view;
 }
 
 function void
 close_build_footer_panel(Application_Links *app){
-  if (view_exists(app, build_footer_panel_view_id)){
-    view_close(app, build_footer_panel_view_id);
-  }
-  build_footer_panel_view_id = 0;
+  qol_bview_close(app);
 }
 
 function View_ID
 open_build_footer_panel(Application_Links *app){
-  if (!view_exists(app, build_footer_panel_view_id)){
-    View_ID view = get_active_view(app, Access_Always);
-    build_footer_panel_view_id = open_footer_panel(app, view);
-    view_set_active(app, view);
-  }
-  return(build_footer_panel_view_id);
+  qol_bview_open(app);
+  return g_qol_b_view;
 }
 
 function View_ID
