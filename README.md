@@ -53,6 +53,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [38 - lister multi-column grid                  ](#c38)
 - [39 - lister bot view                           ](#c39)
 - [40 - isearch ctrl-backspace                    ](#c40)
+- [41 - bottom view                               ](#c41)
 
 ---
 
@@ -410,6 +411,15 @@ I still feel it's far from perfect
 ### 40 - isearch ctrl-backspace <a name="c40"/>
 Once you realize not only is ctrl-backspace wrong, but it doesn't have to be,\
 you just gotta fix it wherever you can, even if it takes 250 loc to do so
+
+</br>
+
+### 41 - bottom view <a name="c41"/>
+So we've done all this setup to have a nice and convenient lister in the bottom view,\
+but that real-estate can also be used for other things, like `*compilation*` and jump-lists
+
+It's convenient for `*compilation*` to have more horizontal space for long compile error messages,\
+and jump-lists require a view in order for jump to next/prev in list to function
 
 </br>
 
