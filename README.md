@@ -41,6 +41,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 - [26 - example kill-rectangle                    ](#c26)
 - [27 - draw comment divider lines                ](#c27)
 - [28 - divider movements                         ](#c28)
+- [29 - jump stack                                ](#c29)
 
 ---
 
@@ -306,6 +307,18 @@ Just a nice and simple change to help visually 'slice' the code into sections wi
 ### 28 - divider movements <a name="c28"/>
 Okay, but now that I can *see* the section I want to jump to\
 I'd like to... y'know, actually *jump* to it now
+
+</br>
+
+### 29 - jump stack <a name="c29"/>
+Now that we've added the ability to jump large distances, we'd also like a way to jump back\
+By tracking our position before and after all commands, we don't need to tag every command which is a jump
+
+Consider a split, one with code we're editing, the other with docs/headers we're reading\
+We'd like to be able to jump in both views independent of one another\
+To accomplish this, we store these per view, rather than globally\
+By declaring `CUSTOM_ID(attachment, ...)` and calling `scope_attachment()` with the view's scope\
+its allocation and deallocation is tied to the view, and cleared to zero on first call
 
 </br>
 
