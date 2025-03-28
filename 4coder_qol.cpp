@@ -3,7 +3,7 @@
 
 //#define SNIPPET_EXPANSION "path/to/snippet.inc"
 
-//#define AUTO_CENTER_AFTER_JUMPS true
+#define AUTO_CENTER_AFTER_JUMPS false
 
 CUSTOM_ID(colors, defcolor_type);
 CUSTOM_ID(colors, defcolor_function);
@@ -21,6 +21,8 @@ CUSTOM_ID(colors, defcolor_operator);
 
 #include "4coder_qol_helper.h"
 #include "4coder_qol_block.cpp"
+
+#include "4coder_qol_jumps.cpp"
 
 global b32 qol_opened_brace = false;
 global u8 qol_target_char;
@@ -56,7 +58,7 @@ void custom_layer_init(Application_Links *app){
   {
     set_custom_hook(app, HookID_BufferViewerUpdate, default_view_adjust);
 
-    set_custom_hook(app, HookID_ViewEventHandler, default_view_input_handler);
+    set_custom_hook(app, HookID_ViewEventHandler, qol_view_input_handler);
     set_custom_hook(app, HookID_Tick, qol_tick);
     set_custom_hook(app, HookID_RenderCaller, qol_render_caller);
     set_custom_hook(app, HookID_WholeScreenRenderCaller, default_whole_screen_render_caller);

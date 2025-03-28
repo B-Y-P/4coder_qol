@@ -75,6 +75,9 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(project_fkey_command, KeyCode_F15);
   Bind(project_fkey_command, KeyCode_F16);
 
+  Bind(qol_jump_down,              KeyCode_LeftBracket, KeyCode_Control);
+  Bind(qol_jump_up,                KeyCode_RightBracket, KeyCode_Control);
+
   SelectMap(file_id);
   Bind(delete_char,            KeyCode_Delete);
   Bind(backspace_char,         KeyCode_Backspace);
@@ -157,10 +160,7 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(write_note,                 KeyCode_Y, KeyCode_Alt);
   Bind(list_all_locations_of_type_definition,               KeyCode_D, KeyCode_Alt);
   Bind(list_all_locations_of_type_definition_of_identifier, KeyCode_T, KeyCode_Alt, KeyCode_Shift);
-  Bind(open_long_braces,           KeyCode_LeftBracket, KeyCode_Control);
-  Bind(open_long_braces_semicolon, KeyCode_LeftBracket, KeyCode_Control, KeyCode_Shift);
-  Bind(open_long_braces_break,     KeyCode_RightBracket, KeyCode_Control, KeyCode_Shift);
-  Bind(select_surrounding_scope,   KeyCode_LeftBracket, KeyCode_Alt);
+  Bind(select_surrounding_scope,         KeyCode_LeftBracket, KeyCode_Alt);
   Bind(select_surrounding_scope_maximal, KeyCode_LeftBracket, KeyCode_Alt, KeyCode_Shift);
   Bind(select_prev_scope_absolute, KeyCode_RightBracket, KeyCode_Alt);
   Bind(select_prev_top_most_scope, KeyCode_RightBracket, KeyCode_Alt, KeyCode_Shift);
