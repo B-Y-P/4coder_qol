@@ -91,3 +91,46 @@ BUFFER_HOOK_SIG(qol_file_save){
 
   return 0;
 }
+
+CUSTOM_COMMAND_SIG(qol_view_input_handler)
+CUSTOM_DOC("QOL Input consumption loop for views")
+{
+  Scratch_Block scratch(app);
+  default_input_handler_init(app, scratch);
+
+  View_ID view = get_this_ctx_view(app, Access_Always);
+  Managed_Scope scope = view_get_managed_scope(app, view);
+
+  for (;;){
+    // NOTE(allen): Get input
+    User_Input input = get_next_input(app, EventPropertyGroup_Any, 0);
+    if (input.abort){
+      break;
+    }
+
+    ProfileScopeNamed(app, "before view input", view_input_profile);
+
+    // NOTE(allen): Mouse Suppression
+    Event_Property event_properties = get_event_properties(&input.event);
+    if (suppressing_mouse && (event_properties & EventPropertyGroup_AnyMouseEvent) != 0){
+      continue;
+    }
+
+    // NOTE(allen): Get binding
+    if (implicit_map_function == 0){
+      implicit_map_function = default_implicit_map;
+    }
+    Implicit_Map_Result map_result = implicit_map_function(app, 0, 0, &input.event);
+    if (map_result.command == 0){
+      leave_current_input_unhandled(app);
+      continue;
+    }
+
+    // NOTE(allen): Run the command and pre/post command stuff
+    qol_pre_command(app, scope);
+    ProfileCloseNow(view_input_profile);
+    map_result.command(app);
+    ProfileScope(app, "after view input");
+    qol_post_command(app, scope);
+  }
+}
