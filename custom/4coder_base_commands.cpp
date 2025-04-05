@@ -684,7 +684,9 @@ CUSTOM_COMMAND_SIG(close_panel)
 CUSTOM_DOC("Closes the currently active panel if it is not the only panel open.")
 {
   View_ID view = get_active_view(app, Access_Always);
-  view_close(app, view);
+  if (view != get_next_view_looped_primary_panels(app, view, Access_Always)){
+    view_close(app, view);
+  }
 }
 
 ////////////////////////////////
