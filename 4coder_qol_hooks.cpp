@@ -26,6 +26,7 @@ CUSTOM_DOC("QOL command for responding to a startup event")
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unimportant, true);
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_Unkillable, true);
     buffer_set_setting(app, qol_temp_buffer, BufferSetting_ReadOnly, false);
+    qol_snippet_init(app);
 
     qol_bview_init(app);
   }

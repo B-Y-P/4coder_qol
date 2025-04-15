@@ -207,31 +207,80 @@ write_snippet(Application_Links *app, View_ID view, Buffer_ID buffer,
   }
 }
 
-function Snippet*
-get_snippet_from_user(Application_Links *app, Snippet *snippets, i32 snippet_count,
-                      String_Const_u8 query){
-  Scratch_Block scratch(app);
-  Lister_Block lister(app, scratch);
-  lister_set_query(lister, query);
-  lister_set_default_handlers(lister);
+function b32
+lister_fill_snippets_file(Application_Links *app, Lister *lister, Arena *arena){
+  String8List list = {};
+  def_search_list_add_system_path(arena, &list, SystemPath_Binary);
+  String_Const_u8 path = def_search_get_full_path(arena, &list, string_u8_litexpr("snippets.4coder"));
+  File_Name_Data file = dump_file(arena, path);
+  Config *parsed = def_config_from_text(app, arena, path, file.data);
+  if (parsed == 0){ return false; }
 
-  Snippet *snippet = snippets;
-  for (i32 i = 0; i < snippet_count; i += 1, snippet += 1){
-    lister_add_item(lister, SCu8(snippet->name), SCu8(snippet->text), snippet, 0);
+  b32 did_fill = false;
+  for (Config_Assignment *node = parsed->first; node != 0; node = node->next){
+    if (!string_match(node->l->identifier, SCu8("snippets")) || node->r->type != ConfigRValueType_Compound){
+      continue;
+    }
+
+    for (Config_Compound_Element *n = node->r->compound->first; n != 0; n = n->next){
+      if (n->r->type != ConfigRValueType_Compound){ continue; }
+      Snippet s = {};
+      Config_Compound_Element *e = n->r->compound->first;
+      if (e && e->r->type == ConfigRValueType_String)  { s.name = (char*)e->r->string.str; e=e->next; } else { continue; }
+      if (e && e->r->type == ConfigRValueType_String)  { s.text = (char*)e->r->string.str; e=e->next; } else { continue; }
+      if (e && e->r->type == ConfigRValueType_Integer) { s.cursor_offset = e->r->integer;  e=e->next; } else { continue; }
+      if (e && e->r->type == ConfigRValueType_Integer) { s.mark_offset   = e->r->integer;  e=e->next; } else { continue; }
+
+      lister_add_item(lister, SCu8(s.name), SCu8(s.text), push_array_write(arena, Snippet, 1, &s), 0);
+      did_fill = true;
+    }
+    break;
   }
-  Lister_Result l_result = run_lister(app, lister);
-  Snippet *result = 0;
-  if (!l_result.canceled){
-    result = (Snippet*)l_result.user_data;
-  }
-  return(result);
+  return did_fill;
 }
 
+global History_Record_Index g_history_idx;
 
-function Snippet*
-get_snippet_from_user(Application_Links *app, Snippet *snippets, i32 snippet_count,
-                      char *query){
-  return(get_snippet_from_user(app, snippets, snippet_count, SCu8(query)));
+function void
+snippet_lister_navigate(Application_Links *app, View_ID view, Lister *lister, i32 delta){
+  lister__navigate__default(app, view, lister, delta);
+
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+  buffer_history_set_current_state_index(app, buffer, g_history_idx);
+
+  i64 idx = lister->item_index;
+  if (!range_contains(Ii64(0, lister->filtered.count), idx)){ return; }
+  Snippet *snippet = (Snippet*)lister->filtered.node_ptrs[idx]->user_data;
+  if (snippet == 0){ return; }
+
+  String_Const_u8 text = SCu8(snippet->text);
+  i64 pos = view_get_cursor_pos(app, view);
+
+  buffer_replace_range(app, buffer, Ii64(pos), text);
+  view_set_cursor_and_preferred_x(app, view, seek_pos(pos + snippet->cursor_offset));
+  view_set_mark(app, view, seek_pos(pos + snippet->mark_offset));
+}
+
+function void
+get_snippet_from_user(Application_Links *app, View_ID view, Arena *arena, String_Const_u8 query){
+  Lister_Block lister(app, arena);
+  lister_set_query(lister, query);
+  lister_set_default_handlers(lister);
+  lister.lister.current->handlers.navigate = snippet_lister_navigate;
+
+  if (!lister_fill_snippets_file(app, lister, arena)){
+    for (i32 i = 0; i < ArrayCount(default_snippets); i += 1){
+      Snippet *snippet = &default_snippets[i];
+      lister_add_item(lister, SCu8(snippet->name), SCu8(snippet->text), snippet, 0);
+    }
+  }
+
+  Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
+  g_history_idx = buffer_history_get_current_state_index(app, buffer);
+  Lister_Result l_result = run_lister(app, lister);
+  if (l_result.canceled){
+    buffer_history_set_current_state_index(app, buffer, g_history_idx);
+  }
 }
 
 CUSTOM_UI_COMMAND_SIG(snippet_lister)
@@ -239,13 +288,8 @@ CUSTOM_DOC("Opens a snippet lister for inserting whole pre-written snippets of t
 {
   View_ID view = get_this_ctx_view(app, Access_ReadWrite);
   if (view != 0){
-    Snippet *snippet = get_snippet_from_user(app, default_snippets,
-                                             ArrayCount(default_snippets),
-                                             "Snippet:");
-
-    Buffer_ID buffer = view_get_buffer(app, view, Access_ReadWriteVisible);
-    i64 pos = view_get_cursor_pos(app, view);
-    write_snippet(app, view, buffer, pos, snippet);
+    Scratch_Block scratch(app);
+    get_snippet_from_user(app, view, scratch, string_u8_litexpr("Snippet:"));
   }
 }
 

@@ -59,6 +59,7 @@ function void qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 fil
 #include "4coder_qol_draw.cpp"
 #include "4coder_qol_lister.cpp"
 #include "4coder_qol_bview.cpp"
+#include "4coder_qol_snippets.cpp"
 
 #include "4coder_qol_bindings.cpp"
 #include "4coder_qol_hooks.cpp"
