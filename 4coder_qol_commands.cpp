@@ -1,4 +1,10 @@
 
+CUSTOM_COMMAND_SIG(qol_clear_jumps)
+CUSTOM_DOC("[QOL] Clears any jump highlights")
+{
+  unlock_jump_buffer();
+}
+
 CUSTOM_COMMAND_SIG(qol_home)
 CUSTOM_DOC("[QOL] Seeks the cursor to the beginning of the visual line")
 {
