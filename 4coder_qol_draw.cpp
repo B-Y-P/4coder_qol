@@ -717,8 +717,85 @@ qol_draw_peek(Application_Links *app, Frame_Info frame_info){
 }
 
 function void
+qol_try_exit_render(Application_Links *app, Frame_Info frame_info){
+  Rect_f32 region = global_get_screen_rectangle(app);
+  Vec2_f32 center = rect_center(region);
+
+  Scratch_Block scratch(app);
+  tutorial_init_title_face(app);
+  local_persist Face_Description desc = get_face_description(app, get_face_id(app, 0));
+  local_persist Face_ID face = try_create_new_face(app, &desc);
+
+  String_Const_u8 s1 = string_u8_litexpr("Trying to Exit with ");
+  String_Const_u8 s2 = push_stringf(scratch, "%lld unsaved buffers", qol_dirty_buffer_count(app));
+  f32 w1 = get_string_advance(app, tutorial.face, s1);
+  f32 w2 = get_string_advance(app, tutorial.face, s2);
+  f32 w = w1 + w2;
+  f32 h = get_face_metrics(app, tutorial.face).line_height;
+  Face_Metrics metrics = get_face_metrics(app, face);
+  Mouse_State mouse = get_mouse_state(app);
+  Vec2_f32 mp = V2f32(mouse.p);
+
+  Fancy_Line line = {};
+  push_fancy_string(scratch, &line, fcolor_id(defcolor_pop1), s1);
+  push_fancy_string(scratch, &line, fcolor_id(defcolor_pop2), s2);
+
+  FColor cl_1 = fcolor_id(defcolor_pop1);
+  FColor cl_2 = fcolor_id(defcolor_pop2);
+  FColor cl_3 = fcolor_id(defcolor_text_default);
+  FColor cl_rect = fcolor_blend(fcolor_argb(0xFF000000), 0.8f, fcolor_id(defcolor_back)); 
+  Rect_f32 r = Rf32_xy_wh(center.x - 0.5f*w, 3.5f*h, w, 3.f*h);
+  draw_rectangle_fcolor(app, rect_inner(r, -15), 5, fcolor_change_alpha(cl_rect, 0.9f));
+
+  f32 pad = 10.f;
+  f32 b_wid = (w - 4*pad) / 3.f;
+  Rect_f32 r1 = Rf32_xy_wh(r.x0 + 1*pad + 0*b_wid, r.y1 - 1.25f*h, b_wid, h);
+  Rect_f32 r2 = Rf32_xy_wh(r.x0 + 2*pad + 1*b_wid, r.y1 - 1.25f*h, b_wid, h);
+  Rect_f32 r3 = Rf32_xy_wh(r.x0 + 3*pad + 2*b_wid, r.y1 - 1.25f*h, b_wid, h);
+
+  draw_fancy_line(app, tutorial.face, fcolor_zero(), &line, r.p0);
+  b32 do_1 = draw_button(app, r1, mp, face, cl_1, SCu8("Save all and exit"));
+  b32 do_2 = draw_button(app, r2, mp, face, cl_2, SCu8("Exit without saving"));
+  b32 do_3 = draw_button(app, r3, mp, face, cl_3, SCu8("Cancel"));
+
+  draw_rectangle_outline_fcolor(app, rect_inner(r, -15), 5, 5, fcolor_id(defcolor_margin_active));
+
+  Key_Code code = (do_1 ? KeyCode_S : do_2 ? KeyCode_Y : do_3 ? KeyCode_N : 0);
+  Input_Event event = { InputEventKind_KeyStroke }; 
+  event.key.code = code;
+
+  if (code != 0){
+    if (mouse.release_l){ enqueue_virtual_event(app, &event); }
+    FColor cl = (do_1 ? cl_1 : do_2 ? cl_2 : do_3 ? cl_3 : fcolor_zero());
+    String_Const_u8 str = push_stringf(scratch, "Key: \"%s\"", key_code_name[code]);
+    Vec2_f32 dim = V2f32(get_string_advance(app, face, str), metrics.line_height);
+    Rect_f32 rect = Rf32_xy_wh(mp + V2f32(pad, pad + metrics.line_height), dim);
+    draw_rectangle_fcolor(app, rect_inner(rect, -pad), 5, cl_rect);
+    draw_rectangle_outline_fcolor(app, rect_inner(rect, -pad), 5, 2, cl);
+    draw_string(app, face, str, 0.5f*(rect.p0 + rect.p1 - dim), cl);
+  }
+
+  if (rect_contains_point(Rf32(r.x1 - w2, r.y0, r.x1, r.y0 + h), mp)){
+    Fancy_Block block = {};
+    for (Buffer_ID b = get_buffer_next(app, 0, Access_Always); b; b=get_buffer_next(app, b, Access_Always)){
+      Dirty_State dirty = buffer_get_dirty_state(app, b);
+      if (HasFlag(dirty, DirtyState_UnsavedChanges)){
+        Fancy_Line *l = push_fancy_line(scratch, &block, cl_3, push_buffer_base_name(app, scratch, b));
+        push_fancy_string(scratch, l, cl_2, 0.5f, 0, string_u8_litexpr("*"));
+      }
+    }
+    Rect_f32 rect = draw_tool_tip(app, face, &block, mp, region, 10, 5, cl_rect);
+    draw_rectangle_outline_fcolor(app, rect, 5, 3, fcolor_id(defcolor_margin_active));
+  }
+}
+
+function void
 qol_whole_screen_render_caller(Application_Links *app, Frame_Info frame_info){
   if (def_get_config_b32(vars_save_string_lit("use_code_peek"))){
     qol_draw_peek(app, frame_info);
+  }
+
+  if (qol_try_exit_view != 0){
+    qol_try_exit_render(app, frame_info);
   }
 }
