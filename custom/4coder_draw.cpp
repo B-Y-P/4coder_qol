@@ -953,7 +953,7 @@ draw_drop_down(Application_Links *app, Face_ID face, Fancy_Block *block,
 }
 
 function b32
-draw_button(Application_Links *app, Rect_f32 rect, Vec2_f32 mouse_p, Face_ID face, String_Const_u8 text){
+draw_button(Application_Links *app, Rect_f32 rect, Vec2_f32 mouse_p, Face_ID face, FColor text_color, String_Const_u8 text){
   b32 hovered = false;
   if (rect_contains_point(rect, mouse_p)){
     hovered = true;
@@ -965,12 +965,17 @@ draw_button(Application_Links *app, Rect_f32 rect, Vec2_f32 mouse_p, Face_ID fac
   draw_rectangle_fcolor(app, rect, 3.f, get_item_margin_color(highlight, 1));
 
   Scratch_Block scratch(app);
-  Fancy_String *fancy = push_fancy_string(scratch, 0, face, fcolor_id(defcolor_text_default), text);
+  Fancy_String *fancy = push_fancy_string(scratch, 0, face, text_color, text);
   Vec2_f32 dim = get_fancy_string_dim(app, 0, fancy);
   Vec2_f32 p = (rect.p0 + rect.p1 - dim)*0.5f;
   draw_fancy_string(app, fancy, p);
 
   return(hovered);
+}
+
+function b32
+draw_button(Application_Links *app, Rect_f32 rect, Vec2_f32 mouse_p, Face_ID face, String_Const_u8 text){
+  return(draw_button(app, rect, mouse_p, face, fcolor_id(defcolor_text_default), text));
 }
 
 // BOTTOM
