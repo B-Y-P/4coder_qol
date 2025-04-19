@@ -69,6 +69,10 @@ qol_tick(Application_Links *app, Frame_Info frame_info){
     animate_in_n_milliseconds(app, 0);
   }
 
+  if (qol_try_exit_view != 0){
+    view_set_active(app, qol_try_exit_view);
+  }
+
   qol_tick_colors(app, frame_info);
 
   qol_tick_bview(app, frame_info);

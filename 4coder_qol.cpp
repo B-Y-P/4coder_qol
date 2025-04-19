@@ -42,6 +42,8 @@ global Face_ID qol_small_face;
 
 global Buffer_ID qol_temp_buffer;
 
+global View_ID qol_try_exit_view;
+
 global u8 g_qol_bot_buffer[1024];
 global String_u8 g_qol_bot_string = Su8(g_qol_bot_buffer, 0, sizeof(g_qol_bot_buffer));
 

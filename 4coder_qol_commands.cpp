@@ -546,3 +546,41 @@ CUSTOM_DOC("[QOL] Prompt deletion of text in the cursor/mark rectangle")
     else if (match_key_code(&in, KeyCode_N)){ return; }
   }
 }
+
+function i64
+qol_dirty_buffer_count(Application_Links *app){
+  i64 count = 0;
+  for (Buffer_ID buffer = get_buffer_next(app, 0, Access_Always);
+       buffer != 0;
+       buffer = get_buffer_next(app, buffer, Access_Always)){
+    Dirty_State dirty = buffer_get_dirty_state(app, buffer);
+    count += HasFlag(dirty, DirtyState_UnsavedChanges);
+  }
+  return count;
+}
+
+CUSTOM_COMMAND_SIG(qol_try_exit)
+CUSTOM_DOC("[QOL] response to a try-exit event")
+{
+  User_Input input = get_current_input(app);
+  if (!match_core_code(&input, CoreCode_TryExit)){ return; }
+
+  b32 do_exit = true;
+  if (!allow_immediate_close_without_checking_for_changes &&
+      qol_dirty_buffer_count(app) != 0){
+    qol_try_exit_view = get_active_view(app, Access_Always);
+    do_exit = false;
+    for (;;){
+      User_Input in = get_next_input(app, EventPropertyGroup_Any, EventProperty_Escape);
+      if (in.abort){ break; }
+      else if (match_key_code(&in, KeyCode_S)){ save_all_dirty_buffers(app); do_exit=true; break; }
+      else if (match_key_code(&in, KeyCode_Y)){ do_exit=true; break; }
+      else if (match_key_code(&in, KeyCode_N)){ break; }
+    }
+  }
+  if (do_exit){
+    TAB_file_save(app);
+    hard_exit(app);
+  }
+  qol_try_exit_view = 0;
+}
