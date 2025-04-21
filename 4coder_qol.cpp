@@ -63,7 +63,7 @@ void custom_layer_init(Application_Links *app){
     set_custom_hook(app, HookID_ViewEventHandler, qol_view_input_handler);
     set_custom_hook(app, HookID_Tick, qol_tick);
     set_custom_hook(app, HookID_RenderCaller, qol_render_caller);
-    set_custom_hook(app, HookID_WholeScreenRenderCaller, default_whole_screen_render_caller);
+    set_custom_hook(app, HookID_WholeScreenRenderCaller, qol_whole_screen_render_caller);
 
     set_custom_hook(app, HookID_DeltaRule, fixed_time_cubic_delta);
     set_custom_hook_memory_size(app, HookID_DeltaRule,

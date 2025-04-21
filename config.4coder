@@ -20,6 +20,7 @@ use_scope_highlight = true;
 use_paren_helper = true;
 use_comment_keyword = true;
 use_comment_annotations = true;  // highlight @iden in comments
+use_code_peek = true;
 lister_whole_word_backspace_when_modified = true;
 show_line_number_margins = true;
 enable_output_wrapping = false;

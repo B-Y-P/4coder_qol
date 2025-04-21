@@ -124,3 +124,37 @@ qol_draw_cpp_token_colors(Application_Links *app, View_ID view, Buffer_ID buffer
     draw_rectangle(app, cursor_tok_rect, 5.f, cur_tok_color);
   }
 }
+
+function void
+qol_paint_cpp_token_colors(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_layout_id){
+  Token_Array array = get_token_array_from_buffer(app, buffer);
+  ARGB_Color cl_type   = fcolor_resolve(fcolor_id(defcolor_type));
+  ARGB_Color cl_func   = fcolor_resolve(fcolor_id(defcolor_function));
+  ARGB_Color cl_macro  = fcolor_resolve(fcolor_id(defcolor_macro));
+  ARGB_Color cl_global = fcolor_resolve(fcolor_id(defcolor_global));
+  ARGB_Color cl_enum   = fcolor_resolve(fcolor_id(defcolor_enum));
+
+  Range_i64 visible_range = text_layout_get_visible_range(app, text_layout_id);
+  Token_Iterator_Array it = token_iterator_pos(0, &array, visible_range.first);
+  for (;;){
+    Scratch_Block scratch(app);
+    Token *token = token_it_read(&it);
+    if (token == 0 || token->pos >= visible_range.max){ break; }
+    ARGB_Color argb = fcolor_resolve(qol_get_token_color_cpp(*token));
+    String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, token);
+    Code_Index_Note *note = code_index_note_from_string(lexeme);
+
+    if (note != 0){
+      switch (note->note_kind){
+        case CodeIndexNote_Function: argb = cl_func;   break;
+        case CodeIndexNote_Type:     argb = cl_type;   break;
+        case CodeIndexNote_Macro:    argb = cl_macro;  break;
+        case CodeIndexNote_Global:   argb = cl_global; break;
+        case CodeIndexNote_Enum:     argb = cl_enum;   break;
+      }
+    }
+
+    paint_text_color(app, text_layout_id, Ii64(token), argb);
+    if(!token_it_inc_all(&it)){ break; }
+  }
+}
