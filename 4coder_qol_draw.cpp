@@ -620,3 +620,72 @@ qol_buffer_region(Application_Links *app, View_ID view_id, Rect_f32 region){
 
   return(region);
 }
+
+function void
+qol_draw_peek(Application_Links *app, Frame_Info frame_info){
+  Scratch_Block scratch(app);
+  String_Const_u8 lexeme = push_token_or_word_under_active_cursor(app, scratch);
+  Code_Index_Note *note = code_index_note_from_string(lexeme);
+  switch (note ? note->note_kind : -1){
+    case CodeIndexNote_Function:
+    case CodeIndexNote_Type:
+    case CodeIndexNote_Macro: break;
+    default: return;
+  }
+
+  Rect_f32 region = global_get_screen_rectangle(app);
+  Vec2_f32 center = rect_center(region);
+  Vec2_f32 dim = rect_half_dim(region);
+  Vec2_f32 bound = V2f32(lerp(rect_x(region), 0.4f),  // x bias since text is left-to-right
+                         lerp(rect_y(region), 0.5f));
+  f32 x0 = f32_floor32(qol_cur_cursor_pos.x < bound.x ? center.x : region.x0);
+  f32 y0 = f32_floor32(Min(qol_cur_cursor_pos.y, region.y1-dim.y));
+  Rect_f32 rect = Rf32_xy_wh(V2f32(x0, y0), dim);
+  // ^ or iterate panels selecting max via (panel-height, dist-to-cursor)
+
+  Buffer_ID peek_buffer = 0;
+  i64 peek_line = 0;
+
+  {
+    code_index_lock();
+    for (Buffer_ID b = get_buffer_next(app, 0, Access_Always);
+         b != 0;
+         b = get_buffer_next(app, b, Access_Always)){
+      Code_Index_File *file = code_index_get_file(b);
+      if (file == 0){ continue; }
+
+      for (i32 i = 0; i < file->note_array.count; i += 1){
+        Code_Index_Note *n = file->note_array.ptrs[i];
+        if (!string_match(n->text, lexeme)){ continue; }
+
+        peek_buffer = b;
+        peek_line = get_line_number_from_pos(app, b, n->pos.first);
+        goto done;
+      }
+    }
+    done:;
+    code_index_unlock();
+  }
+
+  if (peek_buffer == 0){ return; }
+
+  Buffer_Point point = {peek_line};
+  Text_Layout_ID text_layout_id = text_layout_create(app, peek_buffer, rect_inner(rect, 10), point);
+
+  draw_rectangle_fcolor(app, rect, 5, fcolor_change_alpha(fcolor_id(defcolor_back), 0.9f));
+  draw_rectangle_outline_fcolor(app, rect, 5, 5, fcolor_id(defcolor_bar));
+  draw_line_highlight(app, text_layout_id, peek_line, fcolor_id(defcolor_highlight_cursor_line));
+
+  Rect_f32 prev_clip = draw_set_clip(app, text_layout_region(app, text_layout_id));
+  qol_paint_cpp_token_colors(app, peek_buffer, text_layout_id);
+  draw_text_layout_default(app, text_layout_id);
+  text_layout_free(app, text_layout_id);
+  draw_set_clip(app, prev_clip);
+}
+
+function void
+qol_whole_screen_render_caller(Application_Links *app, Frame_Info frame_info){
+  if (def_get_config_b32(vars_save_string_lit("use_code_peek"))){
+    qol_draw_peek(app, frame_info);
+  }
+}

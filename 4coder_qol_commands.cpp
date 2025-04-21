@@ -6,6 +6,13 @@ CUSTOM_DOC("Toggles the visibility of the function tooltips")
   def_set_config_b32(id, !def_get_config_b32(id));
 }
 
+CUSTOM_COMMAND_SIG(toggle_code_peek)
+CUSTOM_DOC("Toggles the visibility of the code peek")
+{
+  String_ID id = vars_save_string_lit("use_code_peek");
+  def_set_config_b32(id, !def_get_config_b32(id));
+}
+
 CUSTOM_COMMAND_SIG(qol_clear_jumps)
 CUSTOM_DOC("[QOL] Clears any jump highlights")
 {
