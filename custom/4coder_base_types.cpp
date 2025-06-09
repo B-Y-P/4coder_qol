@@ -258,17 +258,6 @@ block_fill_u64(void *a, u64 size, u64 val){
   }
 }
 
-#define block_zero_struct(p) block_zero((p), sizeof(*(p)))
-#define block_zero_array(a) block_zero((a), sizeof(a))
-#define block_zero_dynamic_array(p,c) block_zero((p), sizeof(*(p))*(c))
-
-#define block_copy_struct(d,s) block_copy((d), (s), sizeof(*(d)))
-#define block_copy_array(d,s) block_copy((d), (s), sizeof(d))
-#define block_copy_dynamic_array(d,s,c) block_copy((d), (s), sizeof(*(d))*(c))
-
-#define block_match_struct(a,b) block_match((a), (b), sizeof(*(a)))
-#define block_match_array(a,b) block_match((a), (b), sizeof(a))
-
 function void
 block_range_copy__inner(void *dst, void *src, Range_u64 range, i64 shift){
   block_copy((u8*)dst + range.first + shift, (u8*)src + range.first, range.max - range.min);
@@ -281,10 +270,6 @@ block_range_copy__inner(void *dst, void *src, Range_u64 range, i64 shift, u64 it
   shift *= item_size;
   block_range_copy__inner(dst, src, range, shift);
 }
-
-#define block_range_copy(d,s,r,h) block_range_copy__inner((d),(s),Iu64(r),(i64)(h))
-#define block_range_copy_sized(d,s,r,h,i) block_range_copy__inner((d),(s),Iu64(r),(i64)(h),(i))
-#define block_range_copy_typed(d,s,r,h) block_range_copy_sized((d),(s),(r),(h),sizeof(*(d)))
 
 function void
 block_copy_array_shift__inner(void *dst, void *src, u64 it_size, Range_i64 range, i64 shift){
@@ -302,8 +287,6 @@ block_copy_array_shift__inner(void *dst, void *src, u64 it_size, Range_i32 range
   sptr += it_size*range.first;
   block_copy(dptr, sptr, (u64)(it_size*(range.one_past_last - range.first)));
 }
-
-#define block_copy_array_shift(d,s,r,h) block_copy_array_shift__inner((d),(s),sizeof(*(d)),(r),(h))
 
 ////////////////////////////////
 
@@ -2993,8 +2976,6 @@ SCany(String_Const_u32 str){
 function String_Const_char string_empty = {"", 0};
 function String_Const_u8 string_u8_empty = {(u8*)"", 0};
 
-#define file_name_line_number_lit_u8 string_u8_litexpr(file_name_line_number)
-
 ////////////////////////////////
 
 function void*
@@ -3056,10 +3037,6 @@ base_free(Base_Allocator *allocator, void *ptr){
     allocator->free(allocator->user_data, ptr);
   }
 }
-
-#define base_allocate(a,s) base_allocate__inner((a), (s), file_name_line_number_lit_u8)
-#define base_array_loc(a,T,c,l) (T*)(base_allocate__inner((a), sizeof(T)*(c), (l)).str)
-#define base_array(a,T,c) base_array_loc(a,T,c, file_name_line_number_lit_u8)
 
 ////////////////////////////////
 

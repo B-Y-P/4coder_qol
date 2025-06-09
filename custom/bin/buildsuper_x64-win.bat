@@ -46,13 +46,32 @@ set meta_opts=/P /Fi"%preproc_file%" /DMETA_PASS
 set build_dll=/LD /link /INCREMENTAL:NO /OPT:REF /RELEASE /PDBALTPATH:%%%%_PDB%%%%
 set build_dll=%build_dll% /EXPORT:get_version /EXPORT:init_apis
 
+echo -- [%time%]: Metadata build pass
 call cl %opts% %meta_opts% "%target%"
-call cl %opts% "%custom_root%\4coder_metadata_generator.cpp" /Femetadata_generator
+
+if NOT EXIST metadata_generator.exe (
+	echo -- [%time%]: Building metadata_generator
+	call cl %opts% /O2 "%custom_root%\4coder_metadata_generator.cpp" /Femetadata_generator || goto fail
+)
+
+REM echo.
+echo -- [%time%]: Running metadata_generator
 metadata_generator -R "%custom_root%" "%cd%\%preproc_file%"
+
+REM echo.
+echo -- [%time%]: Building custom layer
 call cl %opts% "%target%" /Fe%binname% %build_dll%
+goto skip
+
+:fail
+echo -- Failed
+
+:skip
+echo -- [%time%]: Finished
+echo.
 
 REM file spammation preventation
-del metadata_generator*
+REM del metadata_generator*
 del *.exp
 del *.obj
 del *.lib

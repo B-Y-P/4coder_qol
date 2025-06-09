@@ -66,30 +66,17 @@ table_hash_u64(u64 *v, u64 size){
 }
 static u64
 table_hash(void *v, i32 it_size, u64 size){
-  u64 hash = 0;
   switch (it_size){
-    case 1:
-    {
-      hash = table_hash_u8((u8*)v, size);
-    }break;
-    case 2:
-    {
-      hash = table_hash_u16((u16*)v, size);
-    }break;
-    case 4:
-    {
-      hash = table_hash_u32((u32*)v, size);
-    }break;
-    case 8:
-    {
-      hash = table_hash_u64((u64*)v, size);
-    }break;
-    default:
-    {
-      hash = table_hash_u8((u8*)v, it_size*size);
-    }break;
+        case 1:  return table_hash_u8((u8*)v, size);
+        case 2:  return table_hash_u16((u16*)v, size);
+        case 4:  return table_hash_u32((u32*)v, size);
+        case 8:  return table_hash_u64((u64*)v, size);
+    default: return table_hash_u8((u8*)v, it_size*size);
   }
-  return(hash);
+}
+
+static u64 table_hash(u64 key){
+  return table_hash_u8((u8*)&key, sizeof(u64));
 }
 
 #endif

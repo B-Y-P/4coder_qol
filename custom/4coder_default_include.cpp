@@ -31,6 +31,7 @@
 #include "4coder_log.cpp"
 #include "4coder_hash_functions.cpp"
 #include "4coder_table.cpp"
+//#include "4coder_qol_table.cpp"
 #include "4coder_codepoint_map.cpp"
 #include "4coder_async_tasks.cpp"
 #include "4coder_string_match.cpp"

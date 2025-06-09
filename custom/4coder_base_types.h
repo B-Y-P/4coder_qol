@@ -972,6 +972,11 @@ struct String_Const_Any{
 #define string_litinit(s) {(u8*)(s), sizeof(s) - 1}
 #define string_u8_litinit(s) {(u8*)(s), sizeof(s) - 1}
 
+function String_Const_u8 SCu8(u8 *str, u64 size);
+#define string_u8_litexpr(s) SCu8((u8*)(s), (u64)(sizeof(s) - 1))
+
+#define file_name_line_number_lit_u8 string_u8_litexpr(file_name_line_number)
+
 struct Node_String_Const_char{
   Node_String_Const_char *next;
   String_Const_char string;
@@ -1298,6 +1303,42 @@ struct Base_Allocator{
   Base_Allocator_Set_Access_Signature *set_access;
   void *user_data;
 };
+
+function void base_free(Base_Allocator *allocator, void *ptr);
+function String_Const_u8  base_allocate__inner(Base_Allocator *allocator, u64 size, String_Const_u8 location);
+
+#define base_allocate(a,s)            base_allocate__inner((a), (s), file_name_line_number_lit_u8)
+#define base_array_loc(a,T,c,l)  (T*)(base_allocate__inner((a), sizeof(T)*(c), (l)).str)
+#define base_array(a,T,c)             base_array_loc(a,T,c, file_name_line_number_lit_u8)
+
+function void block_zero(void *mem, u64 size);
+function void block_copy(void *dst, const void *src, u64 size);
+function b32  block_match(void *a, void *b, u64 size);
+
+function void block_range_copy__inner(void *dst, void *src, Range_u64 range, i64 shift);
+function void block_range_copy__inner(void *dst, void *src, Range_u64 range, i64 shift, u64 item_size);
+
+function void block_copy_array_shift__inner(void *dst, void *src, u64 it_size, Range_i64 range, i64 shift);
+function void block_copy_array_shift__inner(void *dst, void *src, u64 it_size, Range_i32 range, i64 shift);
+
+#define block_zero_struct(p)           block_zero((p), sizeof(*(p)))
+#define block_zero_array(a)            block_zero((a), sizeof(a))
+#define block_zero_dynamic_array(p,c)  block_zero((p), sizeof(*(p))*(c))
+
+#define block_copy_struct(d,s)           block_copy((d), (s), sizeof(*(d)))
+#define block_copy_array(d,s)            block_copy((d), (s), sizeof(d))
+#define block_copy_dynamic_array(d,s,c)  block_copy((d), (s), sizeof(*(d))*(c))
+
+#define block_match_struct(a,b)  block_match((a), (b), sizeof(*(a)))
+#define block_match_array(a,b)   block_match((a), (b), sizeof(a))
+
+#define block_range_copy(d,s,r,h)          block_range_copy__inner((d),(s),Iu64(r),(i64)(h))
+#define block_range_copy_sized(d,s,r,h,i)  block_range_copy__inner((d),(s),Iu64(r),(i64)(h),(i))
+#define block_range_copy_typed(d,s,r,h)    block_range_copy_sized((d),(s),(r),(h),sizeof(*(d)))
+    
+#define block_copy_array_shift(d,s,r,h) block_copy_array_shift__inner((d),(s),sizeof(*(d)),(r),(h))
+
+////////////////////////////////
 
 struct Cursor{
   u8 *base;

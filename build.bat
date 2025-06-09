@@ -10,5 +10,6 @@ IF NOT exist ..\test_build (
 )
 pushd ..\test_build
 call %qol_dir%\custom\bin\buildsuper_x64-win.bat %qol_dir%\4coder_qol.cpp %1
-call %qol_dir%\apply.bat
+REM call %qol_dir%\apply.bat
 popd
+REM call run_test.bat
