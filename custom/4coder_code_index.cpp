@@ -674,6 +674,10 @@ cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_
     state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, token);
     generic_parse_inc(state);
     index_new_note(index, state, Ii64(iden), CodeIndexNote_Global, parent);
+    if (token->sub_kind == TokenCppKind_Eq){
+      Code_Index_Nest* nest = generic_parse_statement(index, state);
+      nest->parent = parent;
+    }
     return true;
   }
 
