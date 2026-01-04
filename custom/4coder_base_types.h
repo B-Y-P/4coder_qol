@@ -262,6 +262,11 @@ enum{
 
 #define Stmnt(s) do{ s }while(0)
 
+struct defer__t{};
+template <class F> struct defer_t{ F f; ~defer_t(){ f(); } };
+template <class F> defer_t<F> operator^(defer__t _, F f){ return {f}; }
+#define defer  auto glue(_defer_obj_, __LINE__)  =  defer__t{} ^ [&]()
+
 // NOTE(allen): Assert notes:
 // Break = the run time implementation of break
 //                - replace this to get fancier behavior on assert

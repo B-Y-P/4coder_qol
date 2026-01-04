@@ -6,51 +6,26 @@
 
 global Code_Index global_code_index = {};
 
-function Code_Index_Nest*
-generic_parse_statement(Code_Index_File *index, Generic_Parse_State *state);
-
-function Code_Index_Nest*
-generic_parse_preprocessor(Code_Index_File *index, Generic_Parse_State *state);
-
-function Code_Index_Nest*
-generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state);
-
-function Code_Index_Nest*
-generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state);
-
-function b32
-generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *state, i32 limit);
-
-
 ////////////////////////////////
 // NOTE(allen): Lookups
 
 // TODO(allen): accelerator for these nest lookups?
 // Looks like the only one I ever actually use is the file one, not the array one.
 function Code_Index_Nest*
-code_index_get_nest_(Code_Index_Nest_Ptr_Array *array, i64 pos){
-  Code_Index_Nest *result = 0;
-  i32 count = array->count;
-  Code_Index_Nest **nest_ptrs = array->ptrs;
-  for (i32 i = 0; i < count; i += 1){
-    Code_Index_Nest *nest = nest_ptrs[i];
-    if (nest->open.max <= pos && pos <= nest->close.min){
-      Code_Index_Nest *sub_nest = code_index_get_nest_(&nest->nest_array, pos);
-      if (sub_nest != 0){
-        result = sub_nest;
-      }
-      else{
-        result = nest;
-      }
-      break;
+code_index_get_nest_(Code_Index_Nest* parent, Code_Index_Nest_Ptr_Array *array, i64 pos){
+  for (i32 i = 0; i < array->count; i += 1){
+    Code_Index_Nest *nest = array->ptrs[i];
+    if (nest->open.min <= pos && pos <= nest->close.min){
+      return code_index_get_nest_(nest, &nest->nest_array, pos);
+      // tail-call equiv of `return(sub_nest != 0 ? sub_nest : nest)`
     }
   }
-  return(result);
+  return parent;
 }
 
 function Code_Index_Nest*
 code_index_get_nest(Code_Index_File *file, i64 pos){
-  return(code_index_get_nest_(&file->nest_array, pos));
+  return (file == NULL ? NULL : code_index_get_nest_(NULL, &file->nest_array, pos));
 }
 
 function Code_Index_Note_List*
@@ -73,6 +48,11 @@ code_index_note_from_string(String_Const_u8 string){
     }
   }
   return(result);
+}
+
+internal Token_Iterator_Array
+token_iterator(Generic_Parse_State *state, Token *token){
+  return(token_iterator(state->it.user_id, state->it.tokens, state->it.count, token));
 }
 
 
@@ -237,8 +217,7 @@ index_shift(i64 *ptr, Range_i64 old_range, u64 new_size){
 }
 
 function void
-code_index_shift(Code_Index_Nest_Ptr_Array *array,
-                 Range_i64 old_range, u64 new_size){
+code_index_shift(Code_Index_Nest_Ptr_Array *array, Range_i64 old_range, u64 new_size){
   i32 count = array->count;
   Code_Index_Nest **nest_ptr = array->ptrs;
   for (i32 i = 0; i < count; i += 1, nest_ptr += 1){
@@ -270,31 +249,29 @@ generic_parse_inc(Generic_Parse_State *state){
 }
 
 function void
-generic_parse_skip_soft_tokens(Code_Index_File *index, Generic_Parse_State *state){
-  Token *token = token_it_read(&state->it);
-  for (;token != 0 && !state->finished;){
-    if (state->in_preprocessor && !HasFlag(token->flags, TokenBaseFlag_PreprocessorBody)){
-      break;
-    }
-    if (token->kind == TokenBaseKind_Comment){
-    }
+generic_parse_skip_soft_tokens(Generic_Parse_State *state){
+  for (;;){
+    Token *token = token_it_read(&state->it);
+    if (token == 0 || state->finished){ break; }
+    if (state->in_preprocessor && !HasFlag(token->flags, TokenBaseFlag_PreprocessorBody)){ break; }
+    else if (token->kind == TokenBaseKind_Comment){ /* could look for @META here or somth. */ }
     else if (token->kind == TokenBaseKind_Whitespace){
+#if 0 // NOTE: Wasn't actually being used anywhere
       Range_i64 range = Ii64(token);
-      u8 *ptr = state->contents.str + range.one_past_last - 1;
-      for (i64 i = range.one_past_last - 1;
-           i >= range.first;
-           i -= 1, ptr -= 1){
+      u8 *ptr = state->contents.str + range.max - 1;
+      u8 *end = state->contents.str + range.min - 1;
+      for (; ptr != end; --ptr){
         if (*ptr == '\n'){
           state->prev_line_start = ptr + 1;
           break;
         }
       }
+#endif
     }
     else{
       break;
     }
     generic_parse_inc(state);
-    token = token_it_read(&state->it);
   }
 }
 
@@ -357,12 +334,12 @@ index_new_note(Code_Index_File *index, Generic_Parse_State *state, Range_i64 ran
 function void
 cpp_parse_using(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
 
   Token *token = token_it_read(&state->it);
   if (token != 0 && token->kind == TokenBaseKind_Identifier){
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *peek = token_it_read(&state->it);
     if (peek != 0 && peek->sub_kind == TokenCppKind_Eq){
       generic_parse_inc(state);
@@ -372,9 +349,41 @@ cpp_parse_using(Code_Index_File *index, Generic_Parse_State *state, Code_Index_N
 }
 
 function void
+cpp_parse_extern(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
+  generic_parse_inc(state);
+  generic_parse_skip_soft_tokens(state);
+  Token *token = token_it_read(&state->it);
+  if (token == 0 || token->kind != TokenBaseKind_LiteralString){ return; }
+
+  generic_parse_inc(state);
+  generic_parse_skip_soft_tokens(state);
+  token = token_it_read(&state->it);
+  if (token == 0 || token->kind != TokenBaseKind_ScopeOpen){ return; }
+
+  Code_Index_Nest *result = push_array_zero(state->arena, Code_Index_Nest, 1);
+  result->kind = CodeIndexNest_Scope;
+  result->open = Ii64(token);
+  result->close = Ii64(max_i64);
+  result->file = index;
+  result->parent = parent;
+
+  state->scope_counter += 1;
+  generic_parse_inc(state);
+
+  if (generic_parse_top(index, state, result)){
+    result->is_closed = true;
+    result->close = Ii64(token_it_read(&state->it));
+    generic_parse_inc(state);
+  }
+
+  result->nest_array = code_index_nest_ptr_array_from_list(state->arena, &result->nest_list); state->scope_counter -= 1;
+  code_index_push_nest(&index->nest_list, result);
+}
+
+function void
 cpp_parse_type_structure(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
   if (state->finished){
     return;
   }
@@ -382,7 +391,7 @@ cpp_parse_type_structure(Code_Index_File *index, Generic_Parse_State *state, Cod
   Token *token = token_it_read(&state->it);
   if (token != 0 && token->kind == TokenBaseKind_Identifier){
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *peek = token_it_read(&state->it);
     if (peek != 0 && (peek->kind == TokenBaseKind_StatementClose ||
                       peek->kind == TokenBaseKind_ScopeOpen)){
@@ -391,15 +400,15 @@ cpp_parse_type_structure(Code_Index_File *index, Generic_Parse_State *state, Cod
     }
   }
   if (token != 0 && token->kind == TokenBaseKind_ScopeOpen){
-    Code_Index_Nest *nest = generic_parse_scope(index, state);
+    Code_Index_Nest *nest = generic_parse_scope(index, state, parent);
     code_index_push_nest(&index->nest_list, nest);
   }
 }
 
 function void
-cpp_parse_scan_comma(Code_Index_File *index, Generic_Parse_State *state){
+cpp_parse_scan_comma(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *token = token_it_read(&state->it);
     if (token == 0 || state->finished){ break; }
 
@@ -413,13 +422,13 @@ cpp_parse_scan_comma(Code_Index_File *index, Generic_Parse_State *state){
     }
 
     if (token->kind == TokenBaseKind_ScopeOpen){
-      Code_Index_Nest *nest = generic_parse_scope(index, state);
+      Code_Index_Nest *nest = generic_parse_scope(index, state, parent);
       code_index_push_nest(&index->nest_list, nest);
       continue;
     }
 
     if (token->kind == TokenBaseKind_ParentheticalOpen){
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
+      Code_Index_Nest *nest = generic_parse_paren(index, state, parent);
       code_index_push_nest(&index->nest_list, nest);
       continue;
     }
@@ -441,7 +450,7 @@ cpp_parse_enum_list(Code_Index_File *index, Generic_Parse_State *state, Code_Ind
   state->scope_counter += 1;
 
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *token = token_it_read(&state->it);
     if (token == 0 || state->finished){ break; }
 
@@ -449,13 +458,13 @@ cpp_parse_enum_list(Code_Index_File *index, Generic_Parse_State *state, Code_Ind
       nest->is_closed = true;
       nest->close = Ii64(token);
       generic_parse_inc(state);
-      generic_parse_skip_soft_tokens(index, state);
+      generic_parse_skip_soft_tokens(state);
       break;
     }
     if (token->kind == TokenBaseKind_Identifier){
       index_new_note(index, state, Ii64(token), CodeIndexNote_Enum, parent);
       generic_parse_inc(state);
-      cpp_parse_scan_comma(index, state);
+      cpp_parse_scan_comma(index, state, parent);
       continue;
     }
 
@@ -471,7 +480,7 @@ function void
 cpp_parse_enum(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   // "enum struct Kind : unsigned long long { E1, E2, ... };"
   generic_parse_inc(state);  // "enum"
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
   if (state->finished){ return; }
 
   Token *token = token_it_read(&state->it);
@@ -479,7 +488,7 @@ cpp_parse_enum(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Ne
 
   if (token->sub_kind == TokenCppKind_Struct || token->sub_kind == TokenCppKind_Class){
     generic_parse_inc(state);  // "struct" | "class"
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0){ return; }
   }
@@ -487,7 +496,7 @@ cpp_parse_enum(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Ne
   if (token->kind == TokenBaseKind_Identifier){
     index_new_note(index, state, Ii64(token), CodeIndexNote_Type, parent);
     generic_parse_inc(state);  // <iden>
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0){ return; }
   }
@@ -495,7 +504,7 @@ cpp_parse_enum(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Ne
   if (token->sub_kind == TokenCppKind_Colon){
     do {
       generic_parse_inc(state);  // ":" <int_type>*
-      generic_parse_skip_soft_tokens(index, state);
+      generic_parse_skip_soft_tokens(state);
       token = token_it_read(&state->it);
       if (token == 0){ return; }
     }while(token->kind == qol_TokenKind_Primitive || token->kind == TokenBaseKind_Identifier);
@@ -509,7 +518,7 @@ cpp_parse_enum(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Ne
 function void
 cpp_parse_type_def(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
   for (;;){
     b32 did_advance = false;
     Token *token = token_it_read(&state->it);
@@ -517,25 +526,37 @@ cpp_parse_type_def(Code_Index_File *index, Generic_Parse_State *state, Code_Inde
       break;
     }
 
-    String_Const_u8 lexeme = string_substring(state->contents, Ii64(token));
-
     if (token->kind == TokenBaseKind_Identifier){
-      generic_parse_inc(state);
-      generic_parse_skip_soft_tokens(index, state);
       did_advance = true;
+      generic_parse_inc(state);
+      generic_parse_skip_soft_tokens(state);
       Token *peek = token_it_read(&state->it);
       if (peek != 0 && (peek->kind == TokenBaseKind_StatementClose ||
                         peek->kind == TokenBaseKind_ParentheticalOpen)){
         index_new_note(index, state, Ii64(token), CodeIndexNote_Type, parent);
+        break;
+      }
+    }
+    // typedef type (*func_type_name)( <params> )
+    else if (token->kind == TokenBaseKind_ParentheticalOpen){
+      Token *paren = token;
+      generic_parse_inc(state);
+      generic_parse_skip_soft_tokens(state);
+      Token *peek = token_it_read(&state->it);
+      if (peek != 0 && peek->sub_kind == TokenCppKind_Star){
+        generic_parse_inc(state);
+        generic_parse_skip_soft_tokens(state);
+        peek = token_it_read(&state->it);
+        if (peek != 0 && peek->kind == TokenBaseKind_Identifier){
+          index_new_note(index, state, Ii64(peek), CodeIndexNote_Type, parent);
 
-        if (peek->sub_kind == TokenCppKind_Comma){
-          generic_parse_inc(state);
-          generic_parse_skip_soft_tokens(index, state);
-        }
-        else{
+          state->it = token_iterator(state, paren);
+          Code_Index_Nest *nest = generic_parse_paren(index, state, parent);
+          code_index_push_nest(&index->nest_list, nest);
           break;
         }
       }
+      state->it = token_iterator(state, paren);
     }
     else if (token->kind == TokenBaseKind_StatementClose ||
              token->kind == TokenBaseKind_ScopeOpen ||
@@ -548,7 +569,7 @@ cpp_parse_type_def(Code_Index_File *index, Generic_Parse_State *state, Code_Inde
              token->kind == qol_TokenKind_Struct){
       if (token->sub_kind == TokenCppKind_Struct ||
           token->sub_kind == TokenCppKind_Union){
-        cpp_parse_type_structure(index, state, 0);
+        cpp_parse_type_structure(index, state, parent);
         did_advance = true;
       }
       else if(token->sub_kind == TokenCppKind_Enum){
@@ -558,35 +579,30 @@ cpp_parse_type_def(Code_Index_File *index, Generic_Parse_State *state, Code_Inde
     }
     if (!did_advance){
       generic_parse_inc(state);
-      generic_parse_skip_soft_tokens(index, state);
+      generic_parse_skip_soft_tokens(state);
     }
   }
 }
 
 function b32
 generic_scan_parens(Code_Index_File *index, Generic_Parse_State *state){
-  b32 at_paren_close = false;
   i32 paren_nest_level = 1;
   for (;;){
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *peek = token_it_read(&state->it);
-    if (peek == 0 || state->finished){
-      break;
-    }
+    if (peek == 0 || state->finished){ return false; }
     paren_nest_level += (peek->kind == TokenBaseKind_ParentheticalOpen);
     paren_nest_level -= (peek->kind == TokenBaseKind_ParentheticalClose);
-    at_paren_close = (paren_nest_level == 0);
-    if (at_paren_close){ break; }
+    if (paren_nest_level == 0){ return true; }
   }
-  return at_paren_close;
 }
 
 function b32
 cpp_parse_function(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
   if (state->finished){ return false; }
 
   Token *begin = token_it_read(&state->it);
@@ -594,33 +610,34 @@ cpp_parse_function(Code_Index_File *index, Generic_Parse_State *state, Code_Inde
 
   if (generic_scan_parens(index, state)){
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *end = token_it_read(&state->it);
     if (end != 0 && end->kind == TokenBaseKind_ScopeOpen || end->kind == TokenBaseKind_StatementClose) {
-      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, begin);
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      nest->parent = parent;
+      state->it = token_iterator(state, begin);
+      Code_Index_Nest *nest = generic_parse_paren(index, state, parent);
       code_index_push_nest(&index->nest_list, nest);
       index_new_note(index, state, Ii64(token), CodeIndexNote_Function, parent);
 
-      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, end);
+      state->it = token_iterator(state, end);
       return true;
     }
   }
 
-  state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, begin);
+  state->it = token_iterator(state, begin);
   return false;
 }
 
-// global :: <type> <op>* <iden>{Emit} <op>* [=;]
-// e.g. My_Type g_var;
+// <type> global :: <op>* <iden>{Emit} <op>* (';' | '=' <stmnt> | ',' <global>)
+// e.g. My_Type g_var, *g_another;
 // e.g. int** g_array[COUNT_Y][COUNT_X] = {};
 function b32
 cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
+  b32 result = false;
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  loop:;
+  generic_parse_skip_soft_tokens(state);
   Token *token = token_it_read(&state->it);
-  Token *reset_point = token;
+  Token_Iterator_Array reset_it = state->it;
   Token *parens[16];  // im ok disallowing over 16-dimensional global arrays...
   Token *iden = 0;
   i64 paren_count = 0;
@@ -636,7 +653,7 @@ cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_
     else if (token->kind != TokenBaseKind_Operator || token->sub_kind == TokenCppKind_Eq){ break; }
 
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
   }
 
@@ -644,7 +661,7 @@ cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_
   if (token->kind != TokenBaseKind_Identifier){ goto fail; }
   iden = token;
   generic_parse_inc(state);
-  generic_parse_skip_soft_tokens(index, state);
+  generic_parse_skip_soft_tokens(state);
   token = token_it_read(&state->it);
 
   // <op>*
@@ -658,47 +675,71 @@ cpp_parse_global(Code_Index_File *index, Generic_Parse_State *state, Code_Index_
     else if (token->kind != TokenBaseKind_Operator || token->sub_kind == TokenCppKind_Eq){ break; }
 
     generic_parse_inc(state);
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
   }
 
-  // [;=]
-  if (token->sub_kind == TokenCppKind_Semicolon || token->sub_kind == TokenCppKind_Eq){
+  // [,;=]
+  if (token->sub_kind == TokenCppKind_Comma || token->sub_kind == TokenCppKind_Semicolon || token->sub_kind == TokenCppKind_Eq){
     for (i64 i=0; i<paren_count; i += 1){
-      state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, parens[i]);
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      nest->parent = parent;
+      state->it = token_iterator(state, parens[i]);
+      Code_Index_Nest *nest = generic_parse_paren(index, state, parent);
       code_index_push_nest(&index->nest_list, nest);
     }
 
-    state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, token);
+    state->it = token_iterator(state, token);
     generic_parse_inc(state);
     index_new_note(index, state, Ii64(iden), CodeIndexNote_Global, parent);
+
     if (token->sub_kind == TokenCppKind_Eq){
-      Code_Index_Nest* nest = generic_parse_statement(index, state);
-      nest->parent = parent;
+      for (;;){
+        generic_parse_skip_soft_tokens(state);
+        token = token_it_read(&state->it);
+        if (token == 0 || state->finished){ break; }
+
+        if (token->sub_kind == TokenCppKind_Comma){ generic_parse_inc(state); goto loop; }
+        if (token->kind == TokenBaseKind_StatementClose){ generic_parse_inc(state); break; }
+        if (token->kind == TokenBaseKind_ScopeClose){ break; }
+        if (token->kind == TokenBaseKind_ScopeOpen){
+          Code_Index_Nest *nest = generic_parse_scope(index, state, parent);
+          code_index_push_nest(&index->nest_list, nest);
+          continue;
+        }
+
+        if (token->kind == TokenBaseKind_ParentheticalOpen){
+          Code_Index_Nest *nest = generic_parse_paren(index, state, parent);
+          code_index_push_nest(&index->nest_list, nest);
+          continue;
+        }
+
+        generic_parse_inc(state);
+      }
+    }
+    if (token->sub_kind == TokenCppKind_Comma){
+      goto loop;
     }
     return true;
   }
 
   fail:
-  state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, reset_point);
-  return false;
+  state->it = reset_it;
+  return result;
 }
 
 function Code_Index_Nest*
-generic_parse_statement(Code_Index_File *index, Generic_Parse_State *state){
+generic_parse_statement(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   Code_Index_Nest *result = push_array_zero(state->arena, Code_Index_Nest, 1);
   result->kind = CodeIndexNest_Statement;
   result->open = Ii64(token->pos);
   result->close = Ii64(max_i64);
   result->file = index;
+  result->parent = parent;
 
   state->in_statement = true;
 
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0 || state->finished){
       break;
@@ -744,13 +785,14 @@ generic_parse_statement(Code_Index_File *index, Generic_Parse_State *state){
 }
 
 function Code_Index_Nest*
-generic_parse_preprocessor(Code_Index_File *index, Generic_Parse_State *state){
+generic_parse_preproc(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   Code_Index_Nest *result = push_array_zero(state->arena, Code_Index_Nest, 1);
   result->kind = CodeIndexNest_Preprocessor;
   result->open = Ii64(token->pos);
   result->close = Ii64(max_i64);
   result->file = index;
+  result->parent = parent;
 
   state->in_preprocessor = true;
 
@@ -763,7 +805,7 @@ generic_parse_preprocessor(Code_Index_File *index, Generic_Parse_State *state){
 
   generic_parse_inc(state);
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0 || state->finished){
       break;
@@ -784,15 +826,13 @@ generic_parse_preprocessor(Code_Index_File *index, Generic_Parse_State *state){
     }
 
     if (token->kind == TokenBaseKind_ScopeOpen){
-      Code_Index_Nest *nest = generic_parse_scope(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_scope(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
       continue;
     }
 
     if (token->kind == TokenBaseKind_ParentheticalOpen){
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_paren(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
       continue;
     }
@@ -808,19 +848,20 @@ generic_parse_preprocessor(Code_Index_File *index, Generic_Parse_State *state){
 }
 
 function Code_Index_Nest*
-generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state){
+generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   Code_Index_Nest *result = push_array_zero(state->arena, Code_Index_Nest, 1);
   result->kind = CodeIndexNest_Scope;
   result->open = Ii64(token);
   result->close = Ii64(max_i64);
   result->file = index;
+  result->parent = parent;
 
   state->scope_counter += 1;
 
   generic_parse_inc(state);
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0 || state->finished){
       break;
@@ -834,7 +875,7 @@ generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state){
     }
     else{
       if (token->kind == TokenBaseKind_Preprocessor){
-        Code_Index_Nest *nest = generic_parse_preprocessor(index, state);
+        Code_Index_Nest *nest = generic_parse_preproc(index, state, parent);
         code_index_push_nest(&index->nest_list, nest);
         continue;
       }
@@ -848,8 +889,7 @@ generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state){
     }
 
     if (token->kind == TokenBaseKind_ScopeOpen){
-      Code_Index_Nest *nest = generic_parse_scope(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_scope(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
       continue;
     }
@@ -860,22 +900,19 @@ generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state){
     }
 
     if (token->kind == TokenBaseKind_ParentheticalOpen){
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_paren(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
 
       // NOTE(allen): after a parenthetical group we consider ourselves immediately
       // transitioning into a statement
-      nest = generic_parse_statement(index, state);
-      nest->parent = result;
+      nest = generic_parse_statement(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
 
       continue;
     }
 
     {
-      Code_Index_Nest *nest = generic_parse_statement(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_statement(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
     }
   }
@@ -888,33 +925,19 @@ generic_parse_scope(Code_Index_File *index, Generic_Parse_State *state){
 }
 
 function Code_Index_Nest*
-generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state){
+generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   Token *token = token_it_read(&state->it);
   Code_Index_Nest *result = push_array_zero(state->arena, Code_Index_Nest, 1);
   result->kind = CodeIndexNest_Paren;
   result->open = Ii64(token);
   result->close = Ii64(max_i64);
   result->file = index;
-
-  i64 manifested_characters_on_line = 0;
-  {
-    u8 *ptr = state->prev_line_start;
-    u8 *end_ptr = state->contents.str + token->pos;
-    // NOTE(allen): Initial whitespace
-    for (;ptr < end_ptr; ptr += 1){
-      if (!character_is_whitespace(*ptr)){
-        break;
-      }
-    }
-    // NOTE(allen): Manifested characters
-    manifested_characters_on_line = (i64)(end_ptr - ptr) + token->size;
-  }
-
+  result->parent = parent;
   state->paren_counter += 1;
 
   generic_parse_inc(state);
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     token = token_it_read(&state->it);
     if (token == 0 || state->finished){
       break;
@@ -928,7 +951,7 @@ generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state){
     }
     else{
       if (token->kind == TokenBaseKind_Preprocessor){
-        Code_Index_Nest *nest = generic_parse_preprocessor(index, state);
+        Code_Index_Nest *nest = generic_parse_preproc(index, state, parent);
         code_index_push_nest(&index->nest_list, nest);
         continue;
       }
@@ -946,15 +969,13 @@ generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state){
     }
 
     if (token->kind == TokenBaseKind_ScopeOpen){
-      Code_Index_Nest *nest = generic_parse_scope(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_scope(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
       continue;
     }
 
     if (token->kind == TokenBaseKind_ParentheticalOpen){
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      nest->parent = result;
+      Code_Index_Nest *nest = generic_parse_paren(index, state, result);
       code_index_push_nest(&result->nest_list, nest);
       continue;
     }
@@ -970,13 +991,10 @@ generic_parse_paren(Code_Index_File *index, Generic_Parse_State *state){
 }
 
 function b32
-generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *state, i32 limit){
+generic_parse_top(Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent){
   b32 result = false;
-
-  i64 first_index = token_it_index(&state->it);
-  i64 one_past_last_index = first_index + limit;
   for (;;){
-    generic_parse_skip_soft_tokens(index, state);
+    generic_parse_skip_soft_tokens(state);
     Token *token = token_it_read(&state->it);
 
     if (token == 0 || state->finished){
@@ -984,36 +1002,24 @@ generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *sta
       break;
     }
 
-    if (token->kind == TokenBaseKind_Preprocessor){
-      Code_Index_Nest *nest = generic_parse_preprocessor(index, state);
-      code_index_push_nest(&index->nest_list, nest);
+    if (parent != 0 && token->kind == TokenBaseKind_ScopeClose){
+      result = true;
+      break;
     }
-    else if (token->kind == TokenBaseKind_ScopeOpen){
-      Code_Index_Nest *nest = generic_parse_scope(index, state);
-      code_index_push_nest(&index->nest_list, nest);
-    }
-    else if (token->kind == TokenBaseKind_ParentheticalOpen){
-      Code_Index_Nest *nest = generic_parse_paren(index, state);
-      code_index_push_nest(&index->nest_list, nest);
-    }
+    else if (token->kind == TokenBaseKind_Preprocessor) { code_index_push_nest(&index->nest_list, generic_parse_preproc(index, state, parent)); }
+    else if (token->kind == TokenBaseKind_ScopeOpen)    { code_index_push_nest(&index->nest_list, generic_parse_scope  (index, state, parent)); }
+    else if (token->kind == TokenBaseKind_ParentheticalOpen)    { code_index_push_nest(&index->nest_list, generic_parse_paren  (index, state, parent)); }
     else if (state->do_cpp_parse){
-      if (token->sub_kind == TokenCppKind_Struct ||
-          token->sub_kind == TokenCppKind_Union){
-        cpp_parse_type_structure(index, state, 0);
-      }
-      else if (token->sub_kind == TokenCppKind_Enum){
-        cpp_parse_enum(index, state, 0);
-      }
-      else if (token->sub_kind == TokenCppKind_Typedef){
-        cpp_parse_type_def(index, state, 0);
-      }
-      else if (token->sub_kind == TokenCppKind_Using){
-        cpp_parse_using(index, state, 0);
-      }
-      else if (token->sub_kind == TokenCppKind_Identifier && cpp_parse_function(index, state, 0)){ }
+      /**/ if (token->sub_kind == TokenCppKind_Enum)   { cpp_parse_enum(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Struct) { cpp_parse_type_structure(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Union)  { cpp_parse_type_structure(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Typedef){ cpp_parse_type_def(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Using)  { cpp_parse_using(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Extern) { cpp_parse_extern(index, state, parent); }
+      else if (token->sub_kind == TokenCppKind_Identifier && cpp_parse_function(index, state, parent)){ }
       else if (token->sub_kind == TokenCppKind_Identifier || token->kind == qol_TokenKind_Primitive){
-        state->it = token_iterator(state->it.user_id, state->it.tokens, state->it.count, token);
-        cpp_parse_global(index, state, 0);
+        state->it = token_iterator(state, token);
+        cpp_parse_global(index, state, parent);
       }
       else{
         generic_parse_inc(state);
@@ -1023,8 +1029,7 @@ generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *sta
       generic_parse_inc(state);
     }
 
-    i64 index = token_it_index(&state->it);
-    if (index >= one_past_last_index){
+    if (state->token_it_index_opl <= token_it_index(&state->it)){
       token = token_it_read(&state->it);
       if (token == 0){
         result = true;
@@ -1039,6 +1044,12 @@ generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *sta
   }
 
   return(result);
+}
+
+function b32
+generic_parse_full_input_breaks(Code_Index_File *index, Generic_Parse_State *state, i32 limit){
+  state->token_it_index_opl = token_it_index(&state->it) + limit;
+  return(generic_parse_top(index, state, NULL));
 }
 
 

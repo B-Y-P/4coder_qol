@@ -3,7 +3,7 @@
 
 //#define SNIPPET_EXPANSION "path/to/snippet.inc"
 
-#define AUTO_CENTER_AFTER_JUMPS false
+//#define AUTO_CENTER_AFTER_JUMPS false
 
 #include "4coder_qol_token.h"
 #include "4coder_qol_lister.h"
@@ -21,7 +21,9 @@ CUSTOM_ID(colors, defcolor_struct);
 CUSTOM_ID(colors, defcolor_non_text);
 CUSTOM_ID(colors, defcolor_operator);
 
+#include "languages/qol_parser_helper.h"
 #include "4coder_default_include.cpp"
+#include "languages/cpp_parser.cpp"
 
 #include "4coder_qol_jumps.cpp"
 
@@ -60,6 +62,7 @@ function void qol_setup_essential_mapping(Mapping *mapping, i64 global_id, i64 f
 function void qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code_id);
 
 #include "4coder_qol_commands.cpp"
+#include "4coder_qol_format.cpp"
 #include "4coder_qol_isearch.cpp"
 #include "4coder_qol_draw.cpp"
 #include "4coder_qol_lister.cpp"
@@ -120,6 +123,8 @@ void custom_layer_init(Application_Links *app){
 
     set_custom_hook(app, HookID_Layout, layout_unwrapped);
   }
+    
+def_set_config_b32(vars_save_string_lit("use_function_tooltip"), true);
 
   mapping_init(tctx, &framework_mapping);
   String_ID global_map_id = vars_save_string_lit("keys_global");

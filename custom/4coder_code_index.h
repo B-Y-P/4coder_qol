@@ -108,6 +108,7 @@ struct Generic_Parse_State{
   Arena *arena;
   String_Const_u8 contents;
   Token_Iterator_Array it;
+  i64 token_it_index_opl;
   u8 *prev_line_start;
   b32 finished;
 
@@ -118,6 +119,27 @@ struct Generic_Parse_State{
 
   b32 do_cpp_parse;
 };
+
+internal Token* token_it_read(Token_Iterator_Array *it);
+function Range_i64 Ii64(Token *token);
+function void code_index_push_nest(Code_Index_Nest_List *list, Code_Index_Nest *nest);
+internal Token_Iterator_Array token_iterator(Generic_Parse_State *state, Token *token);
+function Code_Index_Nest_Ptr_Array code_index_nest_ptr_array_from_list(Arena *arena, Code_Index_Nest_List *list);
+function Code_Index_Note_Ptr_Array code_index_note_ptr_array_from_list(Arena *arena, Code_Index_Note_List *list);
+
+function void generic_parse_inc(Generic_Parse_State *state);
+function void generic_parse_skip_soft_tokens(Generic_Parse_State *state);
+function b32 generic_scan_parens(Code_Index_File *index, Generic_Parse_State *state);
+function Code_Index_Nest* generic_parse_statement         (Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent);
+function Code_Index_Nest* generic_parse_preproc           (Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent);
+function Code_Index_Nest* generic_parse_scope             (Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent);
+function Code_Index_Nest* generic_parse_paren             (Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent);
+function b32              generic_parse_top               (Code_Index_File *index, Generic_Parse_State *state, Code_Index_Nest *parent);
+function b32              generic_parse_full_input_breaks (Code_Index_File *index, Generic_Parse_State *state, i32 limit);
+function void             generic_parse_init(Application_Links *app, Arena *arena, String_Const_u8 contents, Token_Array *tokens, Generic_Parse_State *state);
+
+function Code_Index_Note* index_new_note(Code_Index_File *index, Generic_Parse_State *state, Range_i64 range, Code_Index_Note_Kind kind, Code_Index_Nest *parent);
+
 
 #endif
 

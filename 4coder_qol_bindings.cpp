@@ -158,6 +158,10 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
 
   SelectMap(code_id);
   ParentMap(file_id);
+  Bind(qol_nest_test,  KeyCode_Return,  KeyCode_Shift, KeyCode_Alt);
+  Bind(qol_nest_first, KeyCode_Down,    KeyCode_Shift, KeyCode_Alt);
+  Bind(qol_nest_next,  KeyCode_Right,   KeyCode_Shift, KeyCode_Alt);
+  Bind(qol_nest_parent, KeyCode_Up,     KeyCode_Shift, KeyCode_Alt);
   MC_Bind(move_left_alpha_numeric_or_camel_boundary,  KeyCode_Left, KeyCode_Alt);
   MC_Bind(move_right_alpha_numeric_or_camel_boundary, KeyCode_Right, KeyCode_Alt);
   MC_Bind(comment_line_toggle,        KeyCode_Semicolon, KeyCode_Control);
@@ -184,5 +188,5 @@ qol_setup_default_mapping(Mapping *mapping, i64 global_id, i64 file_id, i64 code
   Bind(open_file_in_quotes,              KeyCode_1, KeyCode_Alt);
   Bind(open_matching_file_cpp,           KeyCode_2, KeyCode_Alt);
   Bind(write_zero_struct,                KeyCode_0, KeyCode_Control);
-  Bind(jump_to_definition_at_cursor,     KeyCode_W, KeyCode_Control);
+  Bind(qol_jump_to_definition,           KeyCode_W, KeyCode_Control);
 }

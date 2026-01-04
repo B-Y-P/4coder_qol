@@ -251,66 +251,83 @@ qol_draw_comments(Application_Links *app, Buffer_ID buffer, Text_Layout_ID text_
 }
 
 function void
-qol_draw_function_tooltip_inner(Application_Links *app, Arena *arena, Buffer_ID buffer, Code_Index_Note *note, Range_f32 x_range, i64 depth, Range_i64 range){
-  Range_i64 def_range = note->pos;
-  find_nest_side(app, note->file->buffer, def_range.end+1, FindNest_Paren|FindNest_Balanced|FindNest_EndOfToken, Scan_Forward, NestDelim_Close, &def_range.end);
+qol_draw_function_tooltip_inner(Application_Links *app, Arena *arena, Code_Index_Note *note, Code_Index_Nest* paren_define, Code_Index_Nest* paren_caller, i64 pos, i64 depth){
+  i64 param_hovered = 0;
+  i64 pos_start = paren_caller->open.min;
+  for (Code_Index_Nest *n = paren_caller->nest_list.first; n != 0; n = n->next){
+    if (n->next == 0 || range_contains(Ii64(pos_start, n->close.end), pos)){ break; }
+    pos_start = n->close.start;
+    param_hovered++;
+  }
 
-  String_Const_u8 sig = push_buffer_range(app, arena, note->file->buffer, def_range);
-  sig = string_condense_whitespace(arena, sig);
+  String8List prefix = {};
+  String8List middle = {};
+  String8List suffix = {};
+  string_list_push(arena, &prefix, note->text);
+  string_list_push(arena, &prefix, string_u8_litexpr("("));
+
+  for (Code_Index_Nest *n = paren_define->nest_list.first; n != 0; n = n->next){
+    String8List* list = (0<param_hovered ? &prefix : param_hovered==0 ? &middle : &suffix);
+    param_hovered--;
+    String_Const_u8 param = push_buffer_range(app, arena, note->file->buffer, range_union(n->open, n->close));
+    string_list_push(arena, list, string_condense_whitespace(arena, param));
+    if (n->next){ string_list_push(arena, list, string_u8_litexpr(" ")); }
+  }
+  string_list_push(arena, &suffix, string_u8_litexpr(")"));
 
   Face_Metrics metrics = get_face_metrics(app, qol_small_face);
+  f32 char_wid = metrics.normal_advance;
+  f32 line_hit = metrics.line_height;
+  FColor cl_line = fcolor_id(depth == 1 ? defcolor_cursor : defcolor_ghost_character);
   f32 wid = 2.f;
   f32 pad = 2.f;
-  Rect_f32 rect = {};
-  Vec2_f32 cur_p0 = V2f32(f32_floor32(qol_cur_cursor_pos.x), f32_floor32(qol_cur_cursor_pos.y));
-  rect.p0 = cur_p0 + V2f32(0, 2.f + depth*(1.f + metrics.line_height + pad + 2.f*wid));
-  rect.p1 = rect.p0 + V2f32(sig.size*metrics.normal_advance, wid + metrics.line_height);
-  f32 x_offset = ((rect.x1 > x_range.max)*(rect.x1 - x_range.max) -
-                  (rect.x0 < x_range.min)*(rect.x0 - x_range.max));
-  rect.x0 -= x_offset;
-  rect.x1 -= x_offset;
-  draw_rectangle_fcolor(app, rect, 3.f, fcolor_id(defcolor_back));
-  rect = rect_inner(rect, -pad);
-  draw_rectangle_outline_fcolor(app, rect, 3.f, wid, fcolor_id(depth == 1 ? defcolor_cursor : defcolor_ghost_character));
-  draw_string(app, qol_small_face, sig, rect.p0 + (pad + wid)*V2f32(1,1), fcolor_id(defcolor_ghost_character));
+
+  String_Const_u8 pre = string_list_flatten(arena, prefix);
+  String_Const_u8 mid = string_list_flatten(arena, middle);
+  String_Const_u8 suf = string_list_flatten(arena, suffix);
+
+  Vec2_f32 p0 = V2f32(f32_floor32(qol_cur_cursor_pos.x), f32_floor32(qol_cur_cursor_pos.y) + 2.f + depth*(1.f + metrics.line_height + pad + 2.f*wid));
+  Rect_f32 full   = Rf32(p0 - V2f32(pre.size*char_wid, 0.f), p0 + V2f32((mid.size+suf.size)*char_wid, line_hit));
+  Rect_f32 r_mid  = Rf32(p0, p0 + V2f32(mid.size*char_wid, wid + line_hit));
+  Rect_f32 r_line = Rf32(r_mid.x0, r_mid.y1-4.f, r_mid.x1 + 2.f - (suffix.node_count != 1)*char_wid, r_mid.y1-3.f);
+  Vec2_f32 pre_p0 =  full.p0;
+  Vec2_f32 mid_p0 = r_mid.p0;
+  Vec2_f32 suf_p0 =  full.p1 - V2f32(suf.size*char_wid, line_hit);
+
+  draw_rectangle_fcolor(app, rect_inner(full, -wid), 3.f, fcolor_id(defcolor_back));
+  draw_string(app, qol_small_face, pre, pre_p0 + wid*V2f32(1,1), fcolor_id(defcolor_ghost_character));
+  draw_string(app, qol_small_face, mid, mid_p0 + wid*V2f32(1,1), fcolor_id(defcolor_text_default));
+  draw_string(app, qol_small_face, suf, suf_p0 + wid*V2f32(1,1), fcolor_id(defcolor_ghost_character));
+  draw_rectangle_fcolor(app, r_line, 2.f, cl_line);
+  draw_rectangle_outline_fcolor(app, rect_inner(full, -wid), 3.f, wid, cl_line);
 }
 
 function void
-qol_draw_function_tooltip(Application_Links *app, Buffer_ID buffer, Range_f32 x_range, i64 pos){
+qol_draw_function_tooltip(Application_Links *app, Buffer_ID buffer, i64 pos){
   Token_Array tokens = get_token_array_from_buffer(app, buffer);
   if (tokens.tokens == 0){ return; }
-  Token_Iterator_Array it = token_iterator_pos(0, &tokens, pos);
-  Token *token = token_it_read(&it);
-
-  if (token->kind == TokenBaseKind_ParentheticalOpen){
-    pos = token->pos + token->size;
-  } else if (token_it_dec_all(&it)){
-    token = token_it_read(&it);
-    if (token->kind == TokenBaseKind_ParentheticalClose && pos == token->pos + token->size){
-      pos = token->pos;
-    }
-  }
-
   i64 count = 0;
-  Scratch_Block scratch(app);
-  Range_i64_Array ranges = get_enclosure_ranges(app, scratch, buffer, pos, FindNest_Paren);
 
   code_index_lock();
-  for (i64 i=0; i < ranges.count; i += 1){
-    Scratch_Block temp(app, scratch);
-    Range_i64 range = ranges.ranges[i];
-    i64 f_pos = range.min-1;
-    Token_Iterator_Array cur_it = token_iterator_pos(0, &tokens, f_pos);
-    token = token_it_read(&cur_it);
+  Code_Index_File *file = code_index_get_file(buffer);
+  for (Code_Index_Nest* n=code_index_get_nest(file, pos); n != 0; n = n->parent){
+    Scratch_Block scratch(app);
+    if (n->kind != CodeIndexNest_Paren){ continue; }
+    Token_Iterator_Array it = token_iterator_pos(0, &tokens, n->open.min);
+    token_it_dec_all(&it);
+    Token *token = token_it_read(&it);
 
     if (token->kind == TokenBaseKind_Identifier){
-      String_Const_u8 lexeme = push_token_lexeme(app, temp, buffer, token);
+      String_Const_u8 lexeme = push_token_lexeme(app, scratch, buffer, token);
       Code_Index_Note *note = code_index_note_from_string(lexeme);
       if (note == NULL){ continue; }
       if (note->note_kind == CodeIndexNote_Function ||
           note->note_kind == CodeIndexNote_Macro)
       {
-        qol_draw_function_tooltip_inner(app, temp, buffer, note, x_range, ++count, range);
+        Code_Index_Nest *paren_define = note->parent->nest_list.first;
+        if (paren_define != NULL && paren_define->kind == CodeIndexNest_Paren){
+          qol_draw_function_tooltip_inner(app, scratch, note, paren_define, n, pos, ++count);
+        }
       }
     }
   }
@@ -448,6 +465,7 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   }
 
   qol_draw_scopes(app, view_id, buffer, text_layout_id, metrics.normal_advance);
+  qol_render_nest(app, view_id, buffer, text_layout_id);
 
   b32 use_error_highlight = def_get_config_b32(vars_save_string_lit("use_error_highlight"));
   b32 use_jump_highlight = def_get_config_b32(vars_save_string_lit("use_jump_highlight"));
@@ -515,7 +533,7 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
 
   if (rect_contains_point(rect, qol_cur_cursor_pos) && 
       def_get_config_b32(vars_save_string_lit("use_function_tooltip"))){
-    qol_draw_function_tooltip(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
+    qol_draw_function_tooltip(app, buffer, cursor_pos);
   }
 
   draw_set_clip(app, prev_clip);
