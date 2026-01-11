@@ -154,7 +154,7 @@ qol_paint_cpp_token_colors(Application_Links *app, Buffer_ID buffer, Text_Layout
       }
     }
 
-    paint_text_color(app, text_layout_id, Ii64(token), argb);
+    MM_paint_token_color(app, text_layout_id, token, argb);
     if(!token_it_inc_all(&it)){ break; }
   }
 }

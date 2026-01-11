@@ -61,6 +61,7 @@ Quality of Life custom layer for [4coder](https://mr-4th.itch.io/4coder)
 
 - [x] [multi-cursors](#p1)
 - [x] [tab-sessions](#p2)
+- [x] [minimap](#p3)
 - [ ] miller-collumns
 - [ ] quick-lister
 - [ ] folds
@@ -469,3 +470,16 @@ The key idea was storing and operating on a flat array rather than a recursive b
 When the data can be stored in a flat array, it makes saving to a `.4coder` file *much* easier\
 Using a text file also has the benefit of demonstrating there's "nothing up my sleeve" compared to an opaque binary blob\
 And by having `session_file` specified per-project and opt-in, it avoids needlessly creating files every time you open/close the editor
+
+### minimap <a name="p3">
+Standard scrollable minimap that you've likely seen in most other editors, but this works with virtual whitespace\
+Level 1: Modify a font to have the smallest possible size, then call `render_buffer` a second time\
+Level 2: Hack a custom .ttf font where glyphs are all 1x3 pixel rects then call `render_buffer` a second time\
+Level 3: Override `paint_text_color` to render rects, then call `paint_cpp_token_colors` a second time
+
+This started while I was laying the foundation for language support, trying to get auto-indent to match virtual whitespace\
+To do so, I ended up digging into and debugging a lot of text layout code when 2 things clicked:\
+First, the process of converting layout x-offsets into whitespace could just as easily be used to rescale the offsets for minimap rendering\
+Second, `paint_text_color` is just a function pointer we initialize on startup which I can just swap out for a function of my own\
+So we know *where* to render rects, and what *color* to render them. All that's left is to start iterating tokens\
+Only issue is despite my best efforts, the layout functions are quite expensive so they'll require some more core optimizations

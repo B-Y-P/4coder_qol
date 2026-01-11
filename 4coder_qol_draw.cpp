@@ -513,6 +513,10 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   // NOTE(allen): put the actual text on the actual screen
   draw_text_layout_default(app, text_layout_id);
 
+  if (token_array.tokens){
+    qol_paint_cpp_token_colors(app, buffer, MM_draw_text_id(app, view_id, face_id, buffer, token_array, rect, visible_range));
+  }
+
   if (rect_contains_point(rect, qol_cur_cursor_pos) && 
       def_get_config_b32(vars_save_string_lit("use_function_tooltip"))){
     qol_draw_function_tooltip(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
