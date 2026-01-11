@@ -513,6 +513,14 @@ qol_render_buffer(Application_Links *app, View_ID view_id, Face_ID face_id, Buff
   // NOTE(allen): put the actual text on the actual screen
   draw_text_layout_default(app, text_layout_id);
 
+  if (token_array.tokens){
+    Scratch_Block scratch(app);
+    ARGB_Color cl_nest = fcolor_resolve(fcolor_change_alpha(fcolor_id(defcolor_control), 0.8f));
+    Text_Layout_ID minimap_id = MM_begin(app, scratch, view_id, face_id, buffer, token_array, rect, visible_range, cl_nest);
+    qol_paint_cpp_token_colors(app, buffer, minimap_id);
+    MM_end(app, minimap_id);
+  }
+
   if (rect_contains_point(rect, qol_cur_cursor_pos) && 
       def_get_config_b32(vars_save_string_lit("use_function_tooltip"))){
     qol_draw_function_tooltip(app, buffer, If32(rect.x0, rect.x1), cursor_pos);
