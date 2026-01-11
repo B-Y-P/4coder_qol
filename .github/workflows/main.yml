@@ -11,22 +11,32 @@ jobs:
         include:
         - suffix: x64-win
           os: windows-latest
-          build_cmd: custom\bin\buildsuper_x64-win.bat
+          build_cmd: bin\package.bat -U ..\code\4coder_qol\4coder_qol.cpp code\4coder_qol\custom\bin\buldsuper_
         - suffix: x64-linux
           os: ubuntu-latest
-          build_cmd: ./custom/bin/buildsuper_x64-linux.sh
+          build_cmd: ./bin/package.sh -U ../code/4coder_qol/4coder_qol.cpp code/4coder_qol/custom/bin/buldsuper_
         - suffix: x64-mac
-          os: macos-13
-          build_cmd: ./custom/bin/buildsuper_x64-mac.sh
-#       - suffix: arm64-mac
-#         os: macos-latest
-#         build_cmd: ./custom/bin/buildsuper_arm64-mac.sh
+          os:  macos-15-intel
+          build_cmd: ./bin/package.sh -U ../code/4coder_qol/4coder_qol.cpp code/4coder_qol/custom/bin/buldsuper_
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: ilammy/msvc-dev-cmd@v1.4.1  # this is a no-op on Linux and macOS
+
+    - name: checkout 4cc
+      uses: actions/checkout@v6
+      with:
+        repository: 4coder-community/4cc
+
+    - name: checkout 4coder_qol
+      uses: actions/checkout@v6
+      with:
+        path: 4cc/code
+
     - name: Build 4coder_qol-${{ matrix.suffix }}
-      run: ${{ matrix.build_cmd }} 4coder_qol.cpp release
+    - uses: ilammy/msvc-dev-cmd@v1.4.1  # this is a no-op on Linux and macOS
+    - run: |
+        cd code
+        ${{ matrix.build_cmd }}
+
     - name: Generate 4coder_qol Artifacts
       uses: actions/upload-artifact@v4.6.0
       with:
